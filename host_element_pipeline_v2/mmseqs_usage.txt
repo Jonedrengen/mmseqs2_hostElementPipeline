@@ -1,0 +1,43 @@
+MMseqs2 (Many against Many sequence searching) is an open-source software suite for very fast, 
+parallelized protein sequence searches and clustering of huge protein sequence data sets.
+
+Please cite: M. Steinegger and J. Soding. MMseqs2 enables sensitive protein sequence searching for the analysis of massive data sets. Nature Biotechnology, doi:10.1038/nbt.3988 (2017).
+
+MMseqs2 Version: 18.8cc5c
+© Martin Steinegger (martin.steinegger@snu.ac.kr)
+
+usage: mmseqs <command> [<args>]
+
+Easy workflows for plain text input/output
+  easy-search       	Sensitive homology search
+  easy-cluster      	Slower, sensitive clustering
+  easy-linclust     	Fast linear time cluster, less sensitive clustering
+  easy-taxonomy     	Taxonomic classification
+  easy-rbh          	Find reciprocal best hit
+
+Main workflows for database input/output
+  search            	Sensitive homology search
+  map               	Map nearly identical sequences
+  rbh               	Reciprocal best hit search
+  linclust          	Fast, less sensitive clustering
+  cluster           	Slower, sensitive clustering
+  clusterupdate     	Update previous clustering with new sequences
+  taxonomy          	Taxonomic classification
+
+Input database creation
+  databases         	List and download databases
+  createdb          	Convert FASTA/Q file(s) to a sequence DB
+  createindex       	Store precomputed index on disk to reduce search overhead
+  convertmsa        	Convert Stockholm/PFAM MSA file to a MSA DB
+  msa2profile       	Convert a MSA DB to a profile DB
+
+Format conversion for downstream processing
+  convertalis       	Convert alignment DB to BLAST-tab, SAM or custom format
+  createtsv         	Convert result DB to tab-separated flat file
+  convert2fasta     	Convert sequence DB to FASTA format
+  taxonomyreport    	Create a taxonomy report in Kraken or Krona format
+
+An extended list of all modules can be obtained by calling 'mmseqs -h'.
+
+Bash completion for modules and parameters can be installed by adding "source MMSEQS_HOME/util/bash-completion.sh" to your "$HOME/.bash_profile".
+Include the location of the MMseqs2 binary in your "$PATH" environment variable.
