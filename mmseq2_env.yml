@@ -1,0 +1,9 @@
+name: mmseqs2_JOSS
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+  - r
+dependencies:
+  - mmseqs2
+  - parallel
