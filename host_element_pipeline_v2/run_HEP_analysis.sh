@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #SBATCH --job-name=HEP_analysis
-#SBATCH --output=HEP_analysis.log
+#SBATCH --output=HEP_analysis.out
 #SBATCH --error=HEP_analysis.err
 #SBATCH --partition=project
 #SBATCH --time=24:00:00
