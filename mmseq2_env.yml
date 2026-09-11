@@ -7,3 +7,5 @@ channels:
 dependencies:
   - mmseqs2
   - parallel
+  - python=3.14
+  - pandas

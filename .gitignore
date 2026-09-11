@@ -1,5 +1,8 @@
 
-#old_pipe
+#directories
 host_element_pipeline/
 tests/
 data/
+
+#files
+old_mmseqs_parameters.txt
