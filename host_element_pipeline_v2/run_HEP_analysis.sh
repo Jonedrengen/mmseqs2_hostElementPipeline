@@ -337,27 +337,29 @@ parallel_mmseqs_searches() {
     local list_of_cov_modes="$5"
     local log_file="$6"
     
+    
     local max_seq_array=()
     read -r -a max_seq_array <<< "$list_of_max_seq_lengths"
     local cov_modes_array=()
     read -r -a cov_modes_array <<< "$list_of_cov_modes"
 
     write_log "defined arrays: max_seq_array=(${max_seq_array[*]}), cov_modes_array=(${cov_modes_array[*]})" "INFO" "$log_file"
+    write_log "starting parallel mmseqs with conda bin $conda_env_prefix/bin/parallel" "INFO" "$log_file"
 
-    parallel --jobs "${SLURM_CPUS_PER_TASK:-1}" \
-             --joblog parallel.joblog \
-             run_mmseqs_search_and_convert "$conda_env_prefix" \
-                                           "{1}/query_nucl_db/{1/}_nucl_db_type_2" \
-                                           "{2}" \
-                                           "{1}/results_db" \
-                                           "{1}/tmp/cov_{3}_max_{4}" \
-                                           3 \
-                                           "{3}" \
-                                           "{4}" \
-                                           ::: "$processing_files_dir"/* \
-                                           ::: "$reference_db" \
-                                           ::: "${cov_modes_array[@]}" \
-                                           ::: "${max_seq_array[@]}" 
+    "$conda_env_prefix/bin/parallel" --jobs "${SLURM_CPUS_PER_TASK:-1}" \
+                                    --joblog parallel.joblog \
+                                    run_mmseqs_search_and_convert "$conda_env_prefix" \
+                                                                "{1}/query_nucl_db/{1/}_nucl_db_type_2" \
+                                                                "{2}" \
+                                                                "{1}/results_db" \
+                                                                "{1}/tmp/cov_{3}_max_{4}" \
+                                                                3 \
+                                                                "{3}" \
+                                                                "{4}" \
+                                                                ::: "$processing_files_dir"/* \
+                                                                ::: "$reference_db" \
+                                                                ::: "${cov_modes_array[@]}" \
+                                                                ::: "${max_seq_array[@]}" 
 }
 
 #combine mmseqs search results per isolate
