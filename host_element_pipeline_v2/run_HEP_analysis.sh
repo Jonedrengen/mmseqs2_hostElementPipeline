@@ -389,7 +389,7 @@ combine_mmseqs_results() {
 }
 
 compile_fun() {
-
+    echo
 }
 
 #######################################
