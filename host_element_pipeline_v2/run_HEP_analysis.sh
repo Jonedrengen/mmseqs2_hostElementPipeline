@@ -105,216 +105,68 @@ create_output_structure() {
 load_config() {
     local config_file="$1"
     local log_file="$2"
-    source_directory=""
-    conda_env_prefix=""
-    reference_gene_list_name=""
-    max_seq_lengths_array=""
-    cov_modes_array=""
     
-    source_directory="$(grep '^source_directory=' "$config_file" | awk -F'=' '{print $2}')"
+    pipeline_dir="$(grep '^source_directory=' "$config_file" | awk -F'=' '{print $2}')"
     conda_env_prefix="$(grep '^conda_env_prefix=' "$config_file" | awk -F'=' '{print $2}')"
-    reference_gene_list_name="$(grep '^reference_gene_list_name=' "$config_file" | awk -F'=' '{print $2}')"
-    max_seq_lengths_array="$(grep '^max_seq_lengths_array=' "$config_file" | awk -F'=' '{print $2}')" 
-    cov_modes_array="$(grep '^cov_modes_array=' "$config_file" | awk -F'=' '{print $2}')"
+    max_sequence_lengths="$(grep '^max_seq_lengths_array=' "$config_file" | awk -F'=' '{print $2}')"
+    coverage_modes="$(grep '^cov_modes_array=' "$config_file" | awk -F'=' '{print $2}')"
+    execution_mode="$(grep '^mode=' "$config_file" | awk -F'=' '{print $2}')"
 
-    write_log "source_directory=$source_directory" "INFO" "$log_file"
+    #if slurm mode, load slurm-specific settings
+    if [[ $execution_mode == "slurm" ]]; then
+        slurm_cpus_per_job="$(grep '^slurm_cpus_per_job=' "$config_file" | awk -F'=' '{print $2}')"
+        slurm_memory_per_job="$(grep '^slurm_memory_per_job=' "$config_file" | awk -F'=' '{print $2}')"
+        slurm_partition="$(grep '^slurm_partition=' "$config_file" | awk -F'=' '{print $2}')"
+        max_simultaneous_jobs="$(grep '^max_simultaneous_jobs=' "$config_file" | awk -F'=' '{print $2}')"
+        write_log "slurm_cpus_per_job=$slurm_cpus_per_job" "INFO" "$log_file"
+        write_log "slurm_memory_per_job=$slurm_memory_per_job" "INFO" "$log_file"
+        write_log "slurm_partition=$slurm_partition" "INFO" "$log_file"
+        write_log "max_simultaneous_jobs=$max_simultaneous_jobs" "INFO" "$log_file"
+    fi
+
+    #defining non config variables
+    reference_fasta_file="$pipeline_dir/database/elementgeneList.fasta"
+
+    write_log "pipeline_dir=$pipeline_dir" "INFO" "$log_file"
     write_log "conda_env_prefix=$conda_env_prefix" "INFO" "$log_file"
-    write_log "reference_gene_list_name=$reference_gene_list_name" "INFO" "$log_file"
-    write_log "max_seq_lengths_array=$max_seq_lengths_array" "INFO" "$log_file"
-    write_log "cov_modes_array=$cov_modes_array" "INFO" "$log_file"
+    write_log "max_sequence_lengths=$max_sequence_lengths" "INFO" "$log_file"
+    write_log "coverage_modes=$coverage_modes" "INFO" "$log_file"
+    write_log "execution_mode=$execution_mode" "INFO" "$log_file"
+    write_log "reference_fasta_file=$reference_fasta_file" "INFO" "$log_file"
 }
 
 #sample ID "xxxx.fasta" per line
-write_sample_ID_list() {
+write_sample_id_list() {
     local input_dir="$1"
-    local sample_list_output_dir="$2"
+    local sample_id_list_dir="$2"
     local log_file="$3"
-    local id_list_file="$sample_list_output_dir/sample_ID_list.txt"
-    local pattern="*.f*"
+    local sample_id_list_file="$sample_id_list_dir/sample_ID_list.txt"
+    local fasta_pattern="*.f*"
 
-    find -L "$input_dir" -maxdepth 1 -name "$pattern" -exec basename {} ';' > "$id_list_file"
-    local exit_status=$?
-    if [[ $exit_status -eq 0 ]]; then
-        write_log "wrote sample ID list to $id_list_file" "INFO" "$log_file"
-        write_log "wrote $(wc -l < "$id_list_file") sample IDs to $id_list_file" "INFO" "$log_file"
+    find -L "$input_dir" -maxdepth 1 -name "$fasta_pattern" -exec basename {} ';' > "$sample_id_list_file"
+    local command_exit_status=$?
+    if [[ $command_exit_status -eq 0 ]]; then
+        write_log "wrote sample ID list to $sample_id_list_file" "INFO" "$log_file"
+        write_log "wrote $(wc -l < "$sample_id_list_file") sample IDs to $sample_id_list_file" "INFO" "$log_file"
     else
-        write_log "Failed to write sample ID list to $id_list_file" "ERROR" "$log_file"
+        write_log "Failed to write sample ID list to $sample_id_list_file" "ERROR" "$log_file"
     fi
 
 }
 
 #less than 500 bp sequences removal
 remove_smalls() {
-    local remove_smalls_script="$1"
-    local input_dir="$2"
-    local sample_list="$3"
-    local smalls_output_dir="$4"
+    local remove_smalls_script_file="$1"
+    local input_fasta_dir="$2"
+    local sample_id_list_file="$3"
+    local trimmed_fasta_dir="$4"
     local log_file="$5"
 
-    while read -r line; do
-        perl "$remove_smalls_script" 500 "$input_dir/$line" > "$smalls_output_dir/$line"
-    done < "$sample_list"
+    while read -r sample_filename; do
+        perl "$remove_smalls_script_file" 500 "$input_fasta_dir/$sample_filename" > "$trimmed_fasta_dir/$sample_filename"
+    done < "$sample_id_list_file"
 
-    write_log "remove_smalls script processed $(ls "$smalls_output_dir" | wc -l) files" "INFO" "$log_file"
-}
-
-write_nucl_reference_db() {
-    local conda_env_prefix="$1"
-    local reference_gene_list="$2"
-    local db_output_dest="$3"
-    local log_file="$4"
-    local db_type=2
-    # ref db needed globally
-    reference_db=""
-
-
-    mkdir -p "$db_output_dest"
-    reference_db="$db_output_dest/reference_nucl_db_type_${db_type}"
-    write_log "reference_db=$reference_db" "INFO" "$log_file"
-
-    # db_type = 0 for protein, 1 for nucleotide
-    conda run -p "$conda_env_prefix" mmseqs createdb "$reference_gene_list" \
-                                                     "$reference_db" \
-                                                     --dbtype $db_type > /dev/null
-    
-    local exit_status=$?
-    if [[ $exit_status -eq 0 ]]; then
-        write_log "wrote ref db {dbtype=nucl}: $db_output_dest" "INFO" "$log_file"
-    else
-        write_log "failed to write ref db {dbtype=nucl}: $db_output_dest" "ERROR" "$log_file"
-    fi
-}
-
-write_nucl_query_dbs() {
-    local conda_env_prefix="$1"
-    local input_dir="$2"
-    local sample_list="$3"
-    local db_output_dir="$4"
-    local log_file="$5"
-    local sample_ID=""
-    local db_type=2
-    
-    # iterates over each sample in the sample list and create a query database for it in processing_files
-    while read -r line; do
-        #remove extension and write dir
-        sample_ID="${line%.*}"
-        mkdir -p "$db_output_dir/${sample_ID}/query_nucl_db"
-
-        #make db (nucl = --dbtype 2)
-        conda run -p "$conda_env_prefix" mmseqs createdb "$input_dir/$line" \
-                                 "$db_output_dir/${sample_ID}/query_nucl_db/${sample_ID}_nucl_db_type_${db_type}" \
-                                 --dbtype $db_type > /dev/null
-        
-        #log
-        local exit_status=$?
-        if [[ $exit_status -eq 0 ]]; then
-            write_log "wrote query db nucl type_${db_type}: ${sample_ID} " "INFO"
-        else
-            write_log "Failed to write db nucl type_${db_type}: $sample_ID" "ERROR" "$log_file"
-        fi
-
-    done < "$sample_list"
-
-    write_log "$(ls "$db_output_dir" | wc -l) directories generated in $db_output_dir" "INFO" "$log_file"
-}
-
-# controlled by parallel_mmseqs_searches function
-run_mmseqs_search_and_convert() {
-    # summary:
-    #   Runs an mmseqs search and converts the results to a human-readable format.
-    #   This function is not inteded to be called directly by users.
-    #   This function is used internally to orchestrate mmseqs searches and conversions.
-    # author: 
-    #   Jon Slotved 09-09-2026
-    # Arguments:
-    #   1: conda_env_prefix <path>
-    #   2: query_db         <path>
-    #   3: reference_db     <path>
-    #   4: results_db       <path>
-    #   5: tmp_db           <path>
-    #   6: search_type      <INT>   : made for and tested on 3 (nucleotide search)
-    #   7: cov_mode         <INT>   : 1 (target/ref cov), 2 (query cov).
-    #   8: max_seq_length   <INT>   : maximum sequence length for the search.
-    #   9: log_file         <path>  : (optional)
-
-    local conda_env_prefix="$1"
-    
-    #databases
-    local query_db="$2"
-    local reference_db="$3"
-    local results_db="$4"
-    local tmp_db="$5"
-
-    # mmseqs search parameters
-    local search_type="$6"
-    local cov_mode="$7"
-    local max_seq_length="$8"
-
-    #log
-    local log_file="$9"
-
-    #get the sample name
-    local sample_name=""
-    sample_name=$(basename "$query_db")
-
-    #search and convert outputs
-    local mmseqs_search_output="$results_db/${sample_name}_db_cov_${cov_mode}_max_len_${max_seq_length}"
-    local mmseqs_convert_output="$results_db/${sample_name}_db_cov_${cov_mode}_max_len_${max_seq_length}.tsv"
-
-    # because mmseqs requires the results directory to exist beforehand
-    mkdir -p "$results_db"
-    mkdir -p "$tmp_db"
-
-    #search
-    conda run -p "$conda_env_prefix" mmseqs search "$query_db" \
-                                                   "$reference_db" \
-                                                   "$mmseqs_search_output" \
-                                                   "$tmp_db" \
-                                                   --search-type "$search_type" \
-                                                   --cov-mode "$cov_mode" \
-                                                   --max-seq-len "$max_seq_length" \
-                                                   --min-seq-id 0.8 \
-                                                   -c 0.8 \
-                                                   -s 7.5 \
-                                                   --max-seqs 1000 \
-                                                   --threads 1 \
-                                                   -a \
-                                                   --mask 0 \
-                                                   --comp-bias-corr 0 \
-                                                   --strand 2 > /dev/null
-
-    #logs
-    local exit_status=$?
-    if [[ $exit_status -eq 0 ]]; then
-        write_log "mmseqs search completed: $sample_name against $(basename "$reference_db")" "INFO"
-    else
-        write_log "mmseqs search failed" "ERROR" "$log_file"
-        exit $exit_status
-    fi
-
-    #convert to human readable
-    conda run -p "$conda_env_prefix" mmseqs convertalis "$query_db" \
-                                                       "$reference_db" \
-                                                       "$mmseqs_search_output" \
-                                                       "$mmseqs_convert_output" \
-                                                       --format-output query,target,pident,qcov,tcov,alnlen,mismatch,gapopen,qlen,qstart,qend,tlen,tstart,tend,evalue,bits,cigar \
-                                                       --search-type "$search_type" \
-                                                       --threads 1 > /dev/null
-
-    exit_status=$?
-    if [[ $exit_status -eq 0 ]]; then
-        write_log "mmseqs convertalis completed: $sample_name/$(basename "$mmseqs_convert_output")" "INFO"
-    else
-        write_log "mmseqs convertalis failed" "ERROR" "$log_file"
-        exit $exit_status
-    fi
-    
-    #add header. This is for compatibility with Edwards format (should change later -Jon) 
-    #quick fix... Should change later
-    cp "$mmseqs_convert_output" "$mmseqs_convert_output.tmp"
-    printf "Query_Seq-id\tSubject_Seq-id\tPercent_Identity\tQuery_Coverage\tSubject_Coverage\tAlignment_Length\tMismatches\tGapOpenings\tQuery_Length\tQuery_Start\tQuery_End\tSubject_Length\tSubject_Start\tSubject_End\tE-Value\tBitscore\tCigar\n" > "$mmseqs_convert_output"
-    cat "$mmseqs_convert_output.tmp" >> "$mmseqs_convert_output"
-    rm -f "$mmseqs_convert_output.tmp"
+    write_log "remove_smalls script processed $(ls "$trimmed_fasta_dir" | wc -l) files" "INFO" "$log_file"
 }
 
 #runs n=6 mmseqs searches per isolate found in processing_files
@@ -324,26 +176,26 @@ parallel_mmseqs_searches() {
     #
     # Arguments:
     #   1: conda_env_prefix        <path>   : path to the conda environment prefix
-    #   2: processing_files_dir    <path>   : path to the processing files directory (should contain isolate directories with "query_nucl_db" subdirectories)
-    #   3: reference_db            <path>   : path to the reference database
-    #   4: list_of_max_seq_lengths <STRING> : space-separated maximum sequence lengths
-    #   5: list_of_cov_modes       <STRING> : space-separated coverage modes
+    #   2: processing_dir       <path>   : path to the processing files directory (should contain isolate directories with "query_nucl_db" subdirectories)
+    #   3: reference_db_prefix  <path>   : path to the nucleotide reference database prefix
+    #   4: max_sequence_lengths <STRING> : space-separated maximum sequence lengths
+    #   5: coverage_modes       <STRING> : space-separated coverage modes
     #   6: log_file                <path>   : (optional)
+    # Notes:
+    #   Should decouple mmseqs and conversion steps
 
     local conda_env_prefix="$1"
-    local processing_files_dir="$2"
-    local reference_db="$3"
-    local list_of_max_seq_lengths="$4"
-    local list_of_cov_modes="$5"
+    local processing_dir="$2"
+    local reference_db_prefix="$3"
+    local max_sequence_lengths="$4"
+    local coverage_modes="$5"
     local log_file="$6"
     
-    
-    local max_seq_array=()
-    read -r -a max_seq_array <<< "$list_of_max_seq_lengths"
-    local cov_modes_array=()
-    read -r -a cov_modes_array <<< "$list_of_cov_modes"
+    read -r -a max_sequence_lengths_array <<< "$max_sequence_lengths"
+    local coverage_modes_array=()
+    read -r -a coverage_modes_array <<< "$coverage_modes"
 
-    write_log "defined arrays: max_seq_array=(${max_seq_array[*]}), cov_modes_array=(${cov_modes_array[*]})" "INFO" "$log_file"
+    write_log "defined arrays: max_sequence_lengths_array=(${max_sequence_lengths_array[*]}), coverage_modes_array=(${coverage_modes_array[*]})" "INFO" "$log_file"
     write_log "starting parallel mmseqs with conda bin $conda_env_prefix/bin/parallel" "INFO" "$log_file"
 
     "$conda_env_prefix/bin/parallel" --jobs "${SLURM_CPUS_PER_TASK:-1}" \
@@ -353,13 +205,12 @@ parallel_mmseqs_searches() {
                                                                 "{2}" \
                                                                 "{1}/results_db" \
                                                                 "{1}/tmp/cov_{3}_max_{4}" \
-                                                                3 \
                                                                 "{3}" \
                                                                 "{4}" \
-                                                                ::: "$processing_files_dir"/* \
-                                                                ::: "$reference_db" \
-                                                                ::: "${cov_modes_array[@]}" \
-                                                                ::: "${max_seq_array[@]}" 
+                                                                ::: "$processing_dir"/* \
+                                                                ::: "$reference_db_prefix" \
+                                                                ::: "${coverage_modes_array[@]}" \
+                                                                ::: "${max_sequence_lengths_array[@]}"
 }
 
 #combine mmseqs search results per isolate
@@ -368,30 +219,31 @@ combine_mmseqs_results() {
     # python script removes duplicate entries from the combined results
     #args:
     local conda_env_prefix="$1"
-    local processing_files_dir="$2"
-    local reference_db="$3"
-    local mmseqs_combiner_py_script="$4"
+    local processing_dir="$2"
+    local reference_fasta_file="$3"
+    local results_combiner_script_file="$4"
 
-    local reference_db_ncontigs=
-    local sample_name=
-    local mmseqs_result_dir=
-    
-    reference_db_ncontigs=$(grep ">" "$reference_db" | wc -l)
+    local reference_sequence_count=
+    local sample_id=
+    local results_dir=
 
-    for dir in "$processing_files_dir"/*; do
-        sample_name=$(basename "$dir")
-        mmseqs_result_dir="$dir/results_db"
+    reference_sequence_count=$(grep -c "^>" "$reference_fasta_file")
 
-        conda run -p "$conda_env_prefix" python3 "$mmseqs_combiner_py_script" \
-                                                "$mmseqs_result_dir" \
-                                                "$reference_db" \
-                                                "$reference_db_ncontigs" \
-                                                "$dir/$sample_name"
+    for sample_dir in "$processing_dir"/*; do
+        sample_id=$(basename "$sample_dir")
+        results_dir="$sample_dir/results_db"
+
+        conda run -p "$conda_env_prefix" python3 "$results_combiner_script_file" \
+                                                "$results_dir" \
+                                                "$reference_fasta_file" \
+                                                "$reference_sequence_count" \
+                                                "$sample_dir/$sample_id"
     done
 }
 
-compile_fun() {
-    echo
+write_slurm_array_file() {
+    local sample_id_list_file="$1"
+
 }
 
 #######################################
@@ -418,10 +270,13 @@ validate_input "$input_dir" "$output_dir" "$config_file"
 create_output_structure "$output_dir" "$output_dir/logs/run.log"
 load_config "$config_file" "$output_dir/logs/run.log"
 write_version_info "$conda_env_prefix" "$output_dir/logs/run.log"
-write_sample_ID_list "$input_dir" "$output_dir" "$output_dir/logs/run.log"
+write_sample_id_list "$input_dir" "$output_dir" "$output_dir/logs/run.log"
+
+#source mmseqs functionality
+source "$pipeline_dir/subscripts/mmseqs_functionality.sh"
 
 #removing sequences shorter than 500bp
-remove_smalls "$source_directory/subscripts/removesmalls.pl" \
+remove_smalls "$pipeline_dir/subscripts/removesmalls.pl" \
               "$input_dir" \
               "$output_dir/sample_ID_list.txt" \
               "$output_dir/500_bpTrimmed_fastas" \
@@ -429,28 +284,52 @@ remove_smalls "$source_directory/subscripts/removesmalls.pl" \
 
 #creating mmseqs databases for nucleotide sequences: 1 shared ref and 1 query for each isolate
 write_nucl_reference_db "$conda_env_prefix" \
-                        "$source_directory/database/$reference_gene_list_name" \
+                        "$reference_fasta_file" \
                         "$output_dir/tmp/reference_db" \
-                        "$output_dir/logs/run.log" 
+                        "$output_dir/logs/run.log"
 write_nucl_query_dbs "$conda_env_prefix" \
                      "$output_dir/500_bpTrimmed_fastas" \
                      "$output_dir/sample_ID_list.txt" \
                      "$output_dir/processing_files" \
                      "$output_dir/logs/run.log"
 
-#initiate search of (max_seq_lengths_array * cov_modes_array) combinations
-# exporting functions for GNU parallel
-export -f run_mmseqs_search_and_convert write_log
-parallel_mmseqs_searches "$conda_env_prefix" \
-                        "$output_dir/processing_files" \
-                        "$reference_db" \
-                        "${max_seq_lengths_array[*]}" \
-                        "${cov_modes_array[*]}" \
-                        "$output_dir/logs/run.log"
+#run analysis (local or slurm)
+case "$execution_mode" in
+    local)
+    #initiate search of (max_seq_lengths_array * cov_modes_array) combinations
+    # exporting functions for GNU parallel
+    write_log "Starting $execution_mode mmseqsmode" "INFO" "$output_dir/logs/run.log"
+    export -f run_mmseqs_search_and_convert write_log
+    parallel_mmseqs_searches "$conda_env_prefix" \
+                            "$output_dir/processing_files" \
+                            "$reference_db_prefix" \
+                            "$max_sequence_lengths" \
+                            "$coverage_modes" \
+                            "$output_dir/logs/run.log"
 
-#combine the mmseqs search results per isolate
-combine_mmseqs_results "$conda_env_prefix" \
+    #combine the mmseqs search results per isolate
+    combine_mmseqs_results "$conda_env_prefix" \
                         "$output_dir/processing_files" \
-                        "$reference_db" \
-                        "$source_directory/subscripts/mmseq2_results_replicate_combine.py"
+                        "$reference_fasta_file" \
+                        "$pipeline_dir/subscripts/mmseq2_results_replicate_combine.py"
+    ;;
+    slurm)
+    write_log "Starting $execution_mode mmseqs mode" "INFO" "$output_dir/logs/run.log"
+    source "$pipeline_dir/subscripts/slurm_functionality.sh"
 
+
+    write_manifest_file "$output_dir/processing_files" \
+                        "$coverage_modes" \
+                        "$max_sequence_lengths" \
+                        "$output_dir/manifest.csv"
+
+    #initate slurm runners
+    start_slurm_runners "$output_dir/manifest.csv" \
+                        "$max_simultaneous_jobs" \
+                        "$slurm_cpus_per_job" \
+                        "$slurm_memory_per_job" \
+                        "$slurm_partition" \
+                        "$pipeline_dir/subscripts/slurm_runner_worker.sh"
+    ;;
+    *) write_log "Invalid mode: $execution_mode" "ERROR" "$output_dir/logs/run.log"; exit 1 ;;
+esac
