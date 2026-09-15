@@ -18,7 +18,7 @@ write_nucl_reference_db() {
     reference_db_prefix="$reference_db_dir/reference_nucl_db_type_${database_type}"
     write_log "reference_db_prefix=$reference_db_prefix" "INFO" "$log_file"
 
-    # db_type = 0 for protein, 1 for nucleotide
+    # db_type = 0 for auto, 2 for nucleotide
     conda run -p "$conda_env_prefix" mmseqs createdb "$reference_fasta_file" \
                                                      "$reference_db_prefix" \
                                                      --dbtype $database_type > /dev/null
@@ -134,7 +134,7 @@ run_mmseqs_search_and_convert() {
             cp "$converted_results_file" "$converted_results_file.tmp"
             printf "Query_Seq-id\tSubject_Seq-id\tPercent_Identity\tQuery_Coverage\tSubject_Coverage\tAlignment_Length\tMismatches\tGapOpenings\tQuery_Length\tQuery_Start\tQuery_End\tSubject_Length\tSubject_Start\tSubject_End\tE-Value\tBitscore\tCigar\n" > "$converted_results_file"
             cat "$converted_results_file.tmp" >> "$converted_results_file"
-            rm -f "$converted_results_file.tmp"
+            rm -f "$converted_results_file.tmp"        
         done
     done
 }
