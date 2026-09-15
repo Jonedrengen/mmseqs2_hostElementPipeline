@@ -6,3 +6,4 @@ data/
 
 #files
 old_mmseqs_parameters.txt
+host_element_pipeline_v2/config.env

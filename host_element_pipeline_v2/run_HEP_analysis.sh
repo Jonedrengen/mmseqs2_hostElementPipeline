@@ -319,6 +319,7 @@ case "$execution_mode" in
 
 
     write_manifest_file "$output_dir/processing_files" \
+                        "$reference_db_prefix" \
                         "$coverage_modes" \
                         "$max_sequence_lengths" \
                         "$output_dir/manifest.csv"
@@ -329,7 +330,7 @@ case "$execution_mode" in
                         "$slurm_cpus_per_job" \
                         "$slurm_memory_per_job" \
                         "$slurm_partition" \
-                        "$pipeline_dir/subscripts/slurm_runner_worker.sh"
+                        "$pipeline_dir/subscripts/slurm_runner_worker.sh" 
     ;;
     *) write_log "Invalid mode: $execution_mode" "ERROR" "$output_dir/logs/run.log"; exit 1 ;;
 esac
