@@ -41,6 +41,8 @@ source "$pipeline_dir/subscripts/mmseqs_functionality.sh"
 data_row_for_worker=$(awk -F',' -v chunk="$current_chunk" -v task_id="$SLURM_ARRAY_TASK_ID" '$1 == chunk && $2 == task_id {print}' "$manifest_file")
 IFS=',' read -r _ _ coverage_mode max_sequence_length query_database_prefix reference_database_prefix results_directory temporary_directory <<< "$data_row_for_worker"
 
+
+
 #run search script
 run_mmseqs_search_and_convert "$conda_env_prefix" \
                               "$query_database_prefix" \
