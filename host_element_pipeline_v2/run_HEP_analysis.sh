@@ -4,8 +4,8 @@
 #SBATCH --error=HEP_analysis.err
 #SBATCH --partition=project
 #SBATCH --time=24:00:00
-#SBATCH --cpus-per-task=8
-#SBATCH --mem=128G
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=64G
 
 #notes for slurm:
 # use 16GB mem per cpu. too little will block the db being loaded properly
@@ -316,7 +316,6 @@ case "$execution_mode" in
     slurm)
     write_log "Starting $execution_mode mmseqs mode" "INFO" "$output_dir/logs/run.log"
     source "$pipeline_dir/subscripts/slurm_functionality.sh"
-
 
     write_manifest_file "$output_dir/processing_files" \
                         "$reference_db_prefix" \

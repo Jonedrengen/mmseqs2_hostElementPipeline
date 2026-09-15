@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
-#SBATCH --job-name=hep_worker
+#SBATCH --job-name=mmseqs_worker
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=16G
+#SBATCH --output=mmseqs_worker_%A_%a.out
+#SBATCH --error=mmseqs_worker_%A_%a.err
+#SBATCH --time=04:00:00
 
 # Author: Jon Slotved
 # Description: 

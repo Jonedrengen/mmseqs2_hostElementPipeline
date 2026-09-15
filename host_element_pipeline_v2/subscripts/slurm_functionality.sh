@@ -116,8 +116,10 @@ start_slurm_runners() {
                --cpus-per-task="$slurm_cpus_per_job" \
                --mem="$slurm_memory_per_job" \
                --partition="$slurm_partition" \
+               --job-name="mmseqs_worker_${current_chunk}_${array_start}-${array_end}" \
                "$slurm_worker_script" -p "$pipeline_dir" -e "$conda_env_prefix" -m "$manifest_file" -c "$current_chunk"
                
     done
+    
 }
 
