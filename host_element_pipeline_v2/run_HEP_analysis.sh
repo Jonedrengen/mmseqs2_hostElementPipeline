@@ -117,11 +117,11 @@ load_config() {
         slurm_cpus_per_job="$(grep '^slurm_cpus_per_job=' "$config_file" | awk -F'=' '{print $2}')"
         slurm_memory_per_job="$(grep '^slurm_memory_per_job=' "$config_file" | awk -F'=' '{print $2}')"
         slurm_partition="$(grep '^slurm_partition=' "$config_file" | awk -F'=' '{print $2}')"
-        max_simultaneous_jobs="$(grep '^max_simultaneous_jobs=' "$config_file" | awk -F'=' '{print $2}')"
+        max_jobs_per_array="$(grep '^max_jobs_per_array=' "$config_file" | awk -F'=' '{print $2}')"
         write_log "slurm_cpus_per_job=$slurm_cpus_per_job" "INFO" "$log_file"
         write_log "slurm_memory_per_job=$slurm_memory_per_job" "INFO" "$log_file"
         write_log "slurm_partition=$slurm_partition" "INFO" "$log_file"
-        write_log "max_simultaneous_jobs=$max_simultaneous_jobs" "INFO" "$log_file"
+        write_log "max_jobs_per_array=$max_jobs_per_array" "INFO" "$log_file"
     fi
 
     #defining non config variables
@@ -169,7 +169,6 @@ remove_smalls() {
     write_log "remove_smalls script processed $(ls "$trimmed_fasta_dir" | wc -l) files" "INFO" "$log_file"
 }
 
-#runs n=6 mmseqs searches per isolate found in processing_files
 parallel_mmseqs_searches() {
     # summary:
     #   runs [list_of_max_seq_lengths * list_of_cov_modes] mmseqs searches for each isolate.
@@ -190,13 +189,13 @@ parallel_mmseqs_searches() {
     local max_sequence_lengths="$4"
     local coverage_modes="$5"
     local log_file="$6"
-    
+
+    local -a max_sequence_lengths_array=()
+    local -a coverage_modes_array=()
     read -r -a max_sequence_lengths_array <<< "$max_sequence_lengths"
-    local coverage_modes_array=()
     read -r -a coverage_modes_array <<< "$coverage_modes"
 
-    write_log "defined arrays: max_sequence_lengths_array=(${max_sequence_lengths_array[*]}), coverage_modes_array=(${coverage_modes_array[*]})" "INFO" "$log_file"
-    write_log "starting parallel mmseqs with conda bin $conda_env_prefix/bin/parallel" "INFO" "$log_file"
+    write_log "starting isolate-level parallel mmseqs with conda bin $conda_env_prefix/bin/parallel" "INFO" "$log_file"
 
     "$conda_env_prefix/bin/parallel" --jobs "${SLURM_CPUS_PER_TASK:-1}" \
                                     --joblog parallel.joblog \
@@ -204,9 +203,10 @@ parallel_mmseqs_searches() {
                                                                 "{1}/query_nucl_db/{1/}_nucl_db_type_2" \
                                                                 "{2}" \
                                                                 "{1}/results_db" \
-                                                                "{1}/tmp/cov_{3}_max_{4}" \
+                                                                "{1}/tmp" \
                                                                 "{3}" \
                                                                 "{4}" \
+                                                                "$log_file" \
                                                                 ::: "$processing_dir"/* \
                                                                 ::: "$reference_db_prefix" \
                                                                 ::: "${coverage_modes_array[@]}" \
@@ -287,18 +287,25 @@ write_nucl_reference_db "$conda_env_prefix" \
                         "$reference_fasta_file" \
                         "$output_dir/tmp/reference_db" \
                         "$output_dir/logs/run.log"
-write_nucl_query_dbs "$conda_env_prefix" \
-                     "$output_dir/500_bpTrimmed_fastas" \
-                     "$output_dir/sample_ID_list.txt" \
-                     "$output_dir/processing_files" \
-                     "$output_dir/logs/run.log"
 
 #run analysis (local or slurm)
 case "$execution_mode" in
     local)
-    #initiate search of (max_seq_lengths_array * cov_modes_array) combinations
-    # exporting functions for GNU parallel
     write_log "Starting $execution_mode mmseqsmode" "INFO" "$output_dir/logs/run.log"
+    #initiate search of (max_seq_lengths_array * cov_modes_array) combinations
+    for trimmed_fasta in "$output_dir/500_bpTrimmed_fastas"/*; do
+
+        sample_filename=$(basename "$trimmed_fasta")
+        sample_id="${sample_filename%.*}"
+        query_database_prefix="$output_dir/processing_files/$sample_id/query_nucl_db/${sample_id}_nucl_db_type_2"
+
+        write_nucl_query_db "$conda_env_prefix" \
+                            "$trimmed_fasta" \
+                            "$query_database_prefix" \
+                            "$output_dir/logs/run.log"
+    done
+
+    # exporting functions for GNU parallel
     export -f run_mmseqs_search_and_convert write_log
     parallel_mmseqs_searches "$conda_env_prefix" \
                             "$output_dir/processing_files" \
@@ -318,6 +325,8 @@ case "$execution_mode" in
     source "$pipeline_dir/subscripts/slurm_functionality.sh"
 
     write_manifest_file "$output_dir/processing_files" \
+                        "$output_dir/500_bpTrimmed_fastas" \
+                        "$output_dir/sample_ID_list.txt" \
                         "$reference_db_prefix" \
                         "$coverage_modes" \
                         "$max_sequence_lengths" \
@@ -325,7 +334,7 @@ case "$execution_mode" in
 
     #initate slurm runners
     start_slurm_runners "$output_dir/manifest.csv" \
-                        "$max_simultaneous_jobs" \
+                        "$max_jobs_per_array" \
                         "$slurm_cpus_per_job" \
                         "$slurm_memory_per_job" \
                         "$slurm_partition" \
