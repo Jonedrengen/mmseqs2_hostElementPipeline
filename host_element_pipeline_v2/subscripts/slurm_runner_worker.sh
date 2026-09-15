@@ -4,8 +4,9 @@
 #SBATCH --mem=16G
 
 # Author: Jon Slotved
-# Description: Worker script for running SLURM jobs in the host element pipeline
-#    will run the MMseqs search and conversion process for 1 query (6 are needed per isolate as of 14-09-2026)
+# Description: 
+#   Worker script for running SLURM jobs in the host element pipeline
+#   will run 1 row of the manifest file corresponding to the current SLURM array task
 
 #duplication.. But necessary for standalone worker script
 write_log() {
