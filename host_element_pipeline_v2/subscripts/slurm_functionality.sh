@@ -13,11 +13,10 @@ write_slurm_meta_info_file() {
     local reference_database_prefix="$4"
     local cov_modes_array="$5"
     local max_seq_lengths_array="$6"
-    local slurm_meta_info_file_name="$7"
-    local log_file="${8:-}"
+    local max_jobs_per_array="$7"
+    local slurm_meta_info_file_name="$8"
+    local log_file="${9:-}"
 
-    #task and job counters for SLURM array jobs (1 job=1000 tasks)
-    local max_array_size=100
     local array_task_id_counter=0
     local current_chunk=1
 
@@ -38,7 +37,7 @@ write_slurm_meta_info_file() {
                >> "$slurm_meta_info_file_name"
 
         ((array_task_id_counter++))
-        if [[ $array_task_id_counter -ge $max_array_size ]]; then
+        if [[ $array_task_id_counter -ge $max_jobs_per_array ]]; then
             ((current_chunk++))
             array_task_id_counter=0
         fi
@@ -57,60 +56,28 @@ start_slurm_runners() {
     local slurm_meta_info_file_name="$3"
 
     local max_jobs_per_array="$4"
-    local slurm_cpus_per_job="$5"
-    local slurm_memory_per_job="$6"
-    local slurm_partition="$7"
+    local max_parallel_jobs_per_array="$5"
+    local slurm_cpus_per_job="$6"
+    local slurm_memory_per_job="$7"
+    local slurm_partition="$8"
 
-    local slurm_worker_script="$8"
-    local log_file="${9:-}"
+    local slurm_worker_script="$9"
+    local log_file="${10:-}"
 
     write_log "Starting SLURM runners with SLURM metadata file: $slurm_meta_info_file_name" "INFO" "$log_file"
 
     local num_jobs
     local slurm_chunks
-    local slurm_calc_run_parallel
     num_jobs=$(wc -l < "$slurm_meta_info_file_name")
 
     #used Edwards implementation - Jon Slotved
-    #find slurm array size based on the number of jobs and maximum simultaneous jobs
+    #find slurm array size based on the number of jobs and maximum parallel jobs
     if (( num_jobs % max_jobs_per_array == 0 )); then
         slurm_chunks=$((num_jobs / max_jobs_per_array))
     else
         slurm_chunks=$((num_jobs / max_jobs_per_array + 1)) # This is a ceiling int calculation
     fi
-    # Most used nodes 12, minimum is 1, it will only use 1 if its submits more than 6 batches
-    # Please adjust these numbers accordingly to your specifications or HPC needs
-    # Example: if samplelist contains 1000 files, it will submit 1 SlurmArray job that will run use 12 compute nodes at a time.
-    # Example: if samplelist contains 10000 files, it will submit 10 SlurmArray jobs that will run only 1 compute node per SlurmArray job at a time.
-    if [[ $slurm_chunks == 1 ]]
-    then
-    slurm_calc_run_parallel=12
-
-    elif [[ $slurm_chunks == 2 ]]
-    then
-    slurm_calc_run_parallel=6
-
-    elif [[ $slurm_chunks == 3 ]]
-    then
-    slurm_calc_run_parallel=4
-
-    elif [[ $slurm_chunks == 4 ]]
-    then
-    slurm_calc_run_parallel=3
-
-    elif [[ $slurm_chunks == 5 ]]
-    then
-    slurm_calc_run_parallel=2
-
-    elif [[ $slurm_chunks == 6 ]]
-    then
-    slurm_calc_run_parallel=2
-
-    else
-    slurm_calc_run_parallel=1
-    fi
-
-    write_log "running $(( slurm_calc_run_parallel * slurm_chunks )) jobs: $slurm_calc_run_parallel jobs across $slurm_chunks chunks in parallel" "INFO" "$log_file"
+    write_log "running $num_jobs jobs across $slurm_chunks arrays with a maximum of $max_parallel_jobs_per_array parallel jobs per array" "INFO" "$log_file"
 
     local current_chunk
     local array_start
@@ -122,7 +89,7 @@ start_slurm_runners() {
         echo "Array start for chunk $current_chunk: $array_start"
         echo "Array end for chunk $current_chunk: $array_end"
 
-        sbatch --array="$array_start-$array_end%$slurm_calc_run_parallel" \
+        sbatch --array="$array_start-$array_end%$max_parallel_jobs_per_array" \
                --cpus-per-task="$slurm_cpus_per_job" \
                --mem="$slurm_memory_per_job" \
                --partition="$slurm_partition" \

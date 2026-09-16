@@ -141,10 +141,12 @@ load_config() {
         slurm_memory_per_job="$(grep '^slurm_memory_per_job=' "$config_file" | awk -F'=' '{print $2}')"
         slurm_partition="$(grep '^slurm_partition=' "$config_file" | awk -F'=' '{print $2}')"
         max_jobs_per_array="$(grep '^max_jobs_per_array=' "$config_file" | awk -F'=' '{print $2}')"
+        max_parallel_jobs_per_array="$(grep '^max_parallel_jobs_per_array=' "$config_file" | awk -F'=' '{print $2}')"
         write_log "slurm_cpus_per_job=$slurm_cpus_per_job" "INFO" "$log_file"
         write_log "slurm_memory_per_job=$slurm_memory_per_job" "INFO" "$log_file"
         write_log "slurm_partition=$slurm_partition" "INFO" "$log_file"
         write_log "max_jobs_per_array=$max_jobs_per_array" "INFO" "$log_file"
+        write_log "max_parallel_jobs_per_array=$max_parallel_jobs_per_array" "INFO" "$log_file"
     fi
 
     #defining non config variables
@@ -335,6 +337,7 @@ case "$execution_mode" in
                         "$reference_db_prefix" \
                         "$coverage_modes" \
                         "$max_sequence_lengths" \
+                        "$max_jobs_per_array" \
                         "$output_dir/slurm_meta_info.csv" \
                         "$output_dir/logs/run.log"
 
@@ -343,6 +346,7 @@ case "$execution_mode" in
                         "$pipeline_dir" \
                         "$output_dir/slurm_meta_info.csv" \
                         "$max_jobs_per_array" \
+                        "$max_parallel_jobs_per_array" \
                         "$slurm_cpus_per_job" \
                         "$slurm_memory_per_job" \
                         "$slurm_partition" \
