@@ -12,7 +12,8 @@ write_manifest_file() {
     local reference_database_prefix="$4"
     local cov_modes_array="$5"
     local max_seq_lengths_array="$6"
-    local manifest_file="$7"
+    local manifest_file_name="$7"
+    local log_file="${8:-}"
 
     #task and job counters for SLURM array jobs (1 job=1000 tasks)
     local max_array_size=100
@@ -20,7 +21,7 @@ write_manifest_file() {
     local current_chunk=1
 
     # Write one row per isolate; the worker owns all searches for that isolate.
-    : > "$manifest_file"
+    : > "$manifest_file_name"
     while read -r sample_filename; do
         local sample_name
         sample_name="${sample_filename%.*}"
@@ -32,11 +33,8 @@ write_manifest_file() {
         local temporary_directory="$sample_directory/tmp"
 
         printf "%d,%d,%s,%s,%s,%s,%s,%s,%s,%s\n" \
-               "$current_chunk" "$array_task_id_counter" "$sample_name" \
-               "$trimmed_fasta" "$query_database_prefix" \
-               "$reference_database_prefix" "$results_directory" \
-               "$temporary_directory" "$cov_modes_array" "$max_seq_lengths_array" \
-               >> "$manifest_file"
+               "$current_chunk" "$array_task_id_counter" "$sample_name" "$trimmed_fasta" "$query_database_prefix" "$reference_database_prefix" "$results_directory" "$temporary_directory" "$cov_modes_array" "$max_seq_lengths_array" \
+               >> "$manifest_file_name"
 
         ((array_task_id_counter++))
         if [[ $array_task_id_counter -ge $max_array_size ]]; then
@@ -45,15 +43,15 @@ write_manifest_file() {
         fi
     done < "$sample_id_list_file"
 
-    if [[ -f "$manifest_file" ]]; then
-        write_log "Manifest file written successfully: $manifest_file" "INFO" 
+    if [[ -f "$manifest_file_name" ]]; then
+        write_log "Manifest file written successfully: $manifest_file_name" "INFO" "$log_file"
     else
-        write_log "Failed to write manifest file: $manifest_file" "ERROR"
+        write_log "Failed to write manifest file: $manifest_file_name" "ERROR" "$log_file"
     fi
 }
 
 start_slurm_runners() {
-    local manifest_file="$1"
+    local manifest_file_name="$1"
 
     local max_jobs_per_array="$2"
     local slurm_cpus_per_job="$3"
@@ -61,10 +59,11 @@ start_slurm_runners() {
     local slurm_partition="$5"
 
     local slurm_worker_script="$6"
+    local log_file="${7:-}"
 
-    write_log "Starting SLURM runners with manifest file: $manifest_file" "INFO"
+    write_log "Starting SLURM runners with manifest file: $manifest_file_name" "INFO" "$log_file"
 
-    numJobs=$(wc -l < "$manifest_file")
+    numJobs=$(wc -l < "$manifest_file_name")
 
     #used Edwards implementation - Jon Slotved
     #find slurm array size based on the number of jobs and maximum simultaneous jobs
@@ -105,12 +104,12 @@ start_slurm_runners() {
     Slurm_CalcRunParallel=1
     fi
 
-    write_log "running $(( Slurm_CalcRunParallel * Slurm_chunks )) jobs with $Slurm_CalcRunParallel jobs across $Slurm_chunks chunks in parallel" "INFO"
+    write_log "running $(( Slurm_CalcRunParallel * Slurm_chunks )) jobs with $Slurm_CalcRunParallel jobs across $Slurm_chunks chunks in parallel" "INFO" "$log_file"
 
     for ((current_chunk=1; current_chunk<=Slurm_chunks; current_chunk++))
     do
-        array_start=$(cat "$manifest_file" | grep "^$current_chunk" | head -n 1 | awk -F',' '{print $2}')
-        array_end=$(cat "$manifest_file" | grep "^$current_chunk" | tail -n 1 | awk -F',' '{print $2}')
+        array_start=$(cat "$manifest_file_name" | grep "^$current_chunk" | head -n 1 | awk -F',' '{print $2}')
+        array_end=$(cat "$manifest_file_name" | grep "^$current_chunk" | tail -n 1 | awk -F',' '{print $2}')
         echo "Array start for chunk $current_chunk: $array_start"
         echo "Array end for chunk $current_chunk: $array_end"
 
@@ -119,7 +118,7 @@ start_slurm_runners() {
                --mem="$slurm_memory_per_job" \
                --partition="$slurm_partition" \
                --job-name="mmseqs_worker_${current_chunk}_${array_start}-${array_end}" \
-               "$slurm_worker_script" -p "$pipeline_dir" -e "$conda_env_prefix" -m "$manifest_file" -c "$current_chunk"
+               "$slurm_worker_script" -p "$pipeline_dir" -e "$conda_env_prefix" -m "$manifest_file_name" -c "$current_chunk"
                
     done
     

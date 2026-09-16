@@ -15,7 +15,7 @@
 write_log() {
     local log_message="${1:-No log message provided}"
     local log_type="${2:-INFO}"
-    local log_file="$3"
+    local log_file="${3:-}"
     local time=""
     time=$(date +"%Y-%m-%d %H:%M:%S")
     #stdout
@@ -38,13 +38,12 @@ while getopts "p:e:m:c:" opt; do
 done
 source "$pipeline_dir/subscripts/mmseqs_functionality.sh"
 
+#find row, based on current chunk and SLURM auto-assigned array task ID
+#datarow: current_chunk,array_task_id,sample_name,trimmed_fasta,query_database_prefix,reference_database_prefix,results_directory,temporary_directory,coverage_modes,max_sequence_lengths
 data_row_for_worker=$(awk -F',' -v chunk="$current_chunk" -v task_id="$SLURM_ARRAY_TASK_ID" '$1 == chunk && $2 == task_id {print}' "$manifest_file")
-IFS=',' read -r _ _ _ _ \
-    query_database_prefix reference_database_prefix \
-    results_directory temporary_directory \
-    coverage_modes max_sequence_lengths <<< "$data_row_for_worker"
 
-
+#read row and skip the first four columns (current_chunk, array_task_id, sample_name, trimmed_fasta)
+IFS=',' read -r _ _ _ _ query_database_prefix reference_database_prefix results_directory temporary_directory coverage_modes max_sequence_lengths <<< "$data_row_for_worker"
 
 #run search script
 run_mmseqs_search_and_convert "$conda_env_prefix" \
@@ -53,7 +52,6 @@ run_mmseqs_search_and_convert "$conda_env_prefix" \
                               "$results_directory" \
                               "$temporary_directory" \
                               "$coverage_modes" \
-                              "$max_sequence_lengths" \
-                              ""
+                              "$max_sequence_lengths"
 
 

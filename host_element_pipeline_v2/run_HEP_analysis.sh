@@ -29,12 +29,14 @@ help() {
     echo "  -o <output_dir>      Output directory for compiled results and logs"
     echo "  -c <config_file>     Configuration file specifying source directory and conda environment prefix"
     echo "  -h                   Display this help message"
+    echo "Optional:"
+    echo "  -f <host_file>       Host file, tsv seperated, containing Sample_Name and Host"
 }
 
 write_log() {
     local log_message="${1:-No log message provided}"
     local log_type="${2:-INFO}"
-    local log_file="$3"
+    local log_file="${3:-}"
     local time=""
     time=$(date +"%Y-%m-%d %H:%M:%S")
     #stdout
@@ -47,7 +49,7 @@ write_log() {
 
 write_version_info() {
     local conda_env_prefix="$1"
-    local log_file="$2"
+    local log_file="${2:-}"
     
     write_log "mmseqs version: $(conda run -p "$conda_env_prefix" mmseqs version)" "INFO" "$log_file"
 }
@@ -60,6 +62,7 @@ validate_input() {
     local input_dir="$1"
     local output_dir="$2"
     local config_file="$3"
+    local host_file="$4"
     if [[ ! -d "$input_dir" ]]; then
         echo
         write_log "No input directory found" "ERROR"
@@ -79,12 +82,16 @@ validate_input() {
         echo
         exit 1
     fi
-    write_log "input validation passed" "INFO"
+    if [[ ! -r "$host_file" ]]; then
+        echo
+        write_log "Host file not provided. Assigning host from config" "WARNING"
+        sleep 3
+    fi
 }
 
 create_output_structure() {
     local output_dir="$1"
-    local log_file="$2"
+    local log_file="${2:-}"
 
     mkdir -p "$output_dir"
     mkdir -p "$output_dir/processing_files"
@@ -104,13 +111,14 @@ create_output_structure() {
 #loads into variables from the configuration file
 load_config() {
     local config_file="$1"
-    local log_file="$2"
+    local log_file="${2:-}"
     
     pipeline_dir="$(grep '^source_directory=' "$config_file" | awk -F'=' '{print $2}')"
     conda_env_prefix="$(grep '^conda_env_prefix=' "$config_file" | awk -F'=' '{print $2}')"
     max_sequence_lengths="$(grep '^max_seq_lengths_array=' "$config_file" | awk -F'=' '{print $2}')"
     coverage_modes="$(grep '^cov_modes_array=' "$config_file" | awk -F'=' '{print $2}')"
     execution_mode="$(grep '^mode=' "$config_file" | awk -F'=' '{print $2}')"
+    base_host="$(grep '^base_host=' "$config_file" | awk -F'=' '{print $2}')"
 
     #if slurm mode, load slurm-specific settings
     if [[ $execution_mode == "slurm" ]]; then
@@ -132,6 +140,7 @@ load_config() {
     write_log "max_sequence_lengths=$max_sequence_lengths" "INFO" "$log_file"
     write_log "coverage_modes=$coverage_modes" "INFO" "$log_file"
     write_log "execution_mode=$execution_mode" "INFO" "$log_file"
+    write_log "base_host=$base_host" "INFO" "$log_file"
     write_log "reference_fasta_file=$reference_fasta_file" "INFO" "$log_file"
 }
 
@@ -139,7 +148,7 @@ load_config() {
 write_sample_id_list() {
     local input_dir="$1"
     local sample_id_list_dir="$2"
-    local log_file="$3"
+    local log_file="${3:-}"
     local sample_id_list_file="$sample_id_list_dir/sample_ID_list.txt"
     local fasta_pattern="*.f*"
 
@@ -154,13 +163,32 @@ write_sample_id_list() {
 
 }
 
+write_host_file() {
+    local base_host="$1"
+    local sample_list="$2"
+    local host_file_name="$3"
+    local log_file="${4:-}"
+    
+    : > "$host_file_name"
+    #header
+    echo -e "Sample_Name\tHost" > "$host_file_name"
+    #loop over sample_list
+    local sample_name
+    while read -r sample; do
+        sample_name=${sample%.*}
+        echo -e "${sample_name}\t${base_host}" >> "$host_file_name"
+    done < "$sample_list"
+
+    write_log "Host file written to $host_file_name" "INFO" "$log_file"
+}
+
 #less than 500 bp sequences removal
 remove_smalls() {
     local remove_smalls_script_file="$1"
     local input_fasta_dir="$2"
     local sample_id_list_file="$3"
     local trimmed_fasta_dir="$4"
-    local log_file="$5"
+    local log_file="${5:-}"
 
     while read -r sample_filename; do
         perl "$remove_smalls_script_file" 500 "$input_fasta_dir/$sample_filename" > "$trimmed_fasta_dir/$sample_filename"
@@ -169,82 +197,7 @@ remove_smalls() {
     write_log "remove_smalls script processed $(ls "$trimmed_fasta_dir" | wc -l) files" "INFO" "$log_file"
 }
 
-parallel_mmseqs_searches() {
-    # summary:
-    #   runs [list_of_max_seq_lengths * list_of_cov_modes] mmseqs searches for each isolate.
-    #
-    # Arguments:
-    #   1: conda_env_prefix        <path>   : path to the conda environment prefix
-    #   2: processing_dir       <path>   : path to the processing files directory (should contain isolate directories with "query_nucl_db" subdirectories)
-    #   3: reference_db_prefix  <path>   : path to the nucleotide reference database prefix
-    #   4: max_sequence_lengths <STRING> : space-separated maximum sequence lengths
-    #   5: coverage_modes       <STRING> : space-separated coverage modes
-    #   6: log_file                <path>   : (optional)
-    # Notes:
-    #   Should decouple mmseqs and conversion steps
 
-    local conda_env_prefix="$1"
-    local processing_dir="$2"
-    local reference_db_prefix="$3"
-    local max_sequence_lengths="$4"
-    local coverage_modes="$5"
-    local log_file="$6"
-
-    local -a max_sequence_lengths_array=()
-    local -a coverage_modes_array=()
-    read -r -a max_sequence_lengths_array <<< "$max_sequence_lengths"
-    read -r -a coverage_modes_array <<< "$coverage_modes"
-
-    write_log "starting isolate-level parallel mmseqs with conda bin $conda_env_prefix/bin/parallel" "INFO" "$log_file"
-
-    "$conda_env_prefix/bin/parallel" --jobs "${SLURM_CPUS_PER_TASK:-1}" \
-                                    --joblog parallel.joblog \
-                                    run_mmseqs_search_and_convert "$conda_env_prefix" \
-                                                                "{1}/query_nucl_db/{1/}_nucl_db_type_2" \
-                                                                "{2}" \
-                                                                "{1}/results_db" \
-                                                                "{1}/tmp" \
-                                                                "{3}" \
-                                                                "{4}" \
-                                                                "$log_file" \
-                                                                ::: "$processing_dir"/* \
-                                                                ::: "$reference_db_prefix" \
-                                                                ::: "${coverage_modes_array[@]}" \
-                                                                ::: "${max_sequence_lengths_array[@]}"
-}
-
-#combine mmseqs search results per isolate
-combine_mmseqs_results() {
-    # combines n=6 mmseqs convertalis tsv files into a single file
-    # python script removes duplicate entries from the combined results
-    #args:
-    local conda_env_prefix="$1"
-    local processing_dir="$2"
-    local reference_fasta_file="$3"
-    local results_combiner_script_file="$4"
-
-    local reference_sequence_count=
-    local sample_id=
-    local results_dir=
-
-    reference_sequence_count=$(grep -c "^>" "$reference_fasta_file")
-
-    for sample_dir in "$processing_dir"/*; do
-        sample_id=$(basename "$sample_dir")
-        results_dir="$sample_dir/results_db"
-
-        conda run -p "$conda_env_prefix" python3 "$results_combiner_script_file" \
-                                                "$results_dir" \
-                                                "$reference_fasta_file" \
-                                                "$reference_sequence_count" \
-                                                "$sample_dir/$sample_id"
-    done
-}
-
-write_slurm_array_file() {
-    local sample_id_list_file="$1"
-
-}
 
 #######################################
 ############# run script ##############
@@ -254,23 +207,37 @@ write_slurm_array_file() {
 input_dir=""
 output_dir=""
 config_file=""
-while getopts ":i:o:c:h" opt; do
+host_file=""
+while getopts ":i:o:c:f:h" opt; do
     case "$opt" in
         i) input_dir="$OPTARG";;
         o) output_dir="$OPTARG";;
         c) config_file="$OPTARG";;
+        f) host_file="$OPTARG";;
         h) help; exit 0;;
         *) help; exit 1;;
     esac
 done
 
-validate_input "$input_dir" "$output_dir" "$config_file"
+validate_input "$input_dir" "$output_dir" "$config_file" "$host_file"
 
 #setup
 create_output_structure "$output_dir" "$output_dir/logs/run.log"
 load_config "$config_file" "$output_dir/logs/run.log"
 write_version_info "$conda_env_prefix" "$output_dir/logs/run.log"
 write_sample_id_list "$input_dir" "$output_dir" "$output_dir/logs/run.log"
+#create default host file if not provided
+if [[ -z "$host_file" ]]; then
+    write_log "Host file is not specified" "WARNING" "$output_dir/logs/run.log"
+    sleep 2
+    write_log "writing default host file with base_host=$base_host" "INFO" "$output_dir/logs/run.log"
+    
+    write_host_file "$base_host" \
+                    "$output_dir/sample_ID_list.txt" \
+                    "$output_dir/host_file.tsv" \
+                    "$output_dir/logs/run.log"
+fi
+
 
 #source mmseqs functionality
 source "$pipeline_dir/subscripts/mmseqs_functionality.sh"
@@ -291,8 +258,9 @@ write_nucl_reference_db "$conda_env_prefix" \
 #run analysis (local or slurm)
 case "$execution_mode" in
     local)
-    write_log "Starting $execution_mode mmseqsmode" "INFO" "$output_dir/logs/run.log"
-    #initiate search of (max_seq_lengths_array * cov_modes_array) combinations
+    write_log "Starting $execution_mode mode" "INFO" "$output_dir/logs/run.log"
+    
+    #TODO: encapsulate in a funtion later maybe?
     for trimmed_fasta in "$output_dir/500_bpTrimmed_fastas"/*; do
 
         sample_filename=$(basename "$trimmed_fasta")
@@ -315,13 +283,32 @@ case "$execution_mode" in
                             "$output_dir/logs/run.log"
 
     #combine the mmseqs search results per isolate
-    combine_mmseqs_results "$conda_env_prefix" \
-                        "$output_dir/processing_files" \
-                        "$reference_fasta_file" \
-                        "$pipeline_dir/subscripts/mmseq2_results_replicate_combine.py"
+    for sample_dir in "$output_dir/processing_files"/*; do
+        combine_mmseqs_results_per_isolate "$conda_env_prefix" \
+                              "$sample_dir/results_db" \
+                              "$reference_fasta_file" \
+                              "$pipeline_dir/subscripts/mmseq2_results_replicate_combine.py" \
+                              "$output_dir/logs/run.log"
+    done
+
+    # compile all per-isolate mmseqs results into 1 file
+    compile_mmseqs_results \
+        "$output_dir/processing_files" \
+        "$output_dir/compiled_files" \
+        "$output_dir/logs/run.log"
+
+    run_host_element_screen_processor "$conda_env_prefix" \
+                                     "$pipeline_dir/subscripts/host_element_screen_processor.py" \
+                                     "$output_dir/compiled_files" \
+                                     "$host_file" \
+                                     "$reference_fasta_file" \
+                                     "$output_dir"
+    
+    write_log "Finished local pipeline" "INFO" "$output_dir/logs/run.log"
+    write_log " $(wc -l < "$output_dir/compiled_files/mmseq2_result_compiled.tsv") mmseqs result entries compiled" "INFO" "$output_dir/logs/run.log"
     ;;
     slurm)
-    write_log "Starting $execution_mode mmseqs mode" "INFO" "$output_dir/logs/run.log"
+    write_log "Starting $execution_mode mode" "INFO" "$output_dir/logs/run.log"
     source "$pipeline_dir/subscripts/slurm_functionality.sh"
 
     write_manifest_file "$output_dir/processing_files" \
@@ -330,7 +317,8 @@ case "$execution_mode" in
                         "$reference_db_prefix" \
                         "$coverage_modes" \
                         "$max_sequence_lengths" \
-                        "$output_dir/manifest.csv"
+                        "$output_dir/manifest.csv" \
+                        "$output_dir/logs/run.log"
 
     #initate slurm runners
     start_slurm_runners "$output_dir/manifest.csv" \
@@ -338,7 +326,8 @@ case "$execution_mode" in
                         "$slurm_cpus_per_job" \
                         "$slurm_memory_per_job" \
                         "$slurm_partition" \
-                        "$pipeline_dir/subscripts/slurm_runner_worker.sh" 
+                        "$pipeline_dir/subscripts/slurm_runner_worker.sh" \
+                        "$output_dir/logs/run.log"
     ;;
     *) write_log "Invalid mode: $execution_mode" "ERROR" "$output_dir/logs/run.log"; exit 1 ;;
 esac
