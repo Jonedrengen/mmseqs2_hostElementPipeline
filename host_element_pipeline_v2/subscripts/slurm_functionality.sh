@@ -110,7 +110,7 @@ start_slurm_compiler() {
     local slurm_compiler_script="$8"
     local log_file="${9:-}"
 
-    write_log "Starting SLURM compiler" "INFO" "$log_file"
+    write_log "SLURM compiler" "INFO" "$log_file"
 
     sbatch --dependency=singleton \
            --cpus-per-task=1 \

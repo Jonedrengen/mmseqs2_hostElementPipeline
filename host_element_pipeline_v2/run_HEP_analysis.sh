@@ -92,7 +92,6 @@ validate_input() {
     fi
     if [[ -f "$host_file" ]]; then
         local header_line=$'Genome_Ref\tHost'
-        local Host="Host"
         if [[ $(grep -F "$header_line" "$host_file") ]]; then
             write_log "Host file contains the required header: $header_line" "INFO"
         else
