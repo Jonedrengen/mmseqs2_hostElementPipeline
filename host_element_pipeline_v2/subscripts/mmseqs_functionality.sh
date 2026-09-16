@@ -220,7 +220,7 @@ combine_mmseqs_results_per_isolate() {
     if [[ $exit_status -ne 0 ]]; then
         write_log "Failed to combine mmseqs results for $sample_id" "ERROR" "$log_file"
     else
-        write_log "Successfully combined mmseqs results for $sample_id" "INFO" "$log_file"
+        write_log "Successfully combined mmseqs results for $sample_id" "INFO"
     fi
 }
 

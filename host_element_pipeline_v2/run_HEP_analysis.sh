@@ -74,17 +74,20 @@ validate_input() {
         echo
         write_log "No output directory specified" "ERROR"
         echo
+        help
         exit 1
     fi
     if [[ ! -r "$config_file" ]]; then
         echo
         write_log "Configuration file not readable or does not exist" "ERROR"
         echo
+        help
         exit 1
     fi
     if [[ ! -r "$host_file" ]]; then
         echo
-        write_log "Host file not provided. Assigning host from config" "WARNING"
+        write_log "Host .tsv file not provided. Assigning host from config" "WARNING"
+        echo
         sleep 3
     fi
 }
@@ -236,6 +239,8 @@ if [[ -z "$host_file" ]]; then
                     "$output_dir/sample_ID_list.txt" \
                     "$output_dir/host_file.tsv" \
                     "$output_dir/logs/run.log"
+    host_file="$output_dir/host_file.tsv"
+    write_log "wrote host file: $(head -n 5 "$host_file")" "INFO" "$output_dir/logs/run.log"
 fi
 
 
@@ -299,37 +304,47 @@ case "$execution_mode" in
 
     run_host_element_screen_processor "$conda_env_prefix" \
                                      "$pipeline_dir/subscripts/host_element_screen_processor.py" \
-                                     "$output_dir/compiled_files" \
+                                     "$output_dir/compiled_files/result_compiled" \
                                      "$host_file" \
                                      "$reference_fasta_file" \
                                      "$output_dir"
     
     write_log "Finished local pipeline" "INFO" "$output_dir/logs/run.log"
-    write_log " $(wc -l < "$output_dir/compiled_files/mmseq2_result_compiled.tsv") mmseqs result entries compiled" "INFO" "$output_dir/logs/run.log"
+    write_log " $(wc -l < "$output_dir/compiled_files/mmseq2_result_presence_absence.tsv") isolates compiled" "INFO" "$output_dir/logs/run.log"
     ;;
     slurm)
     write_log "Starting $execution_mode mode" "INFO" "$output_dir/logs/run.log"
     source "$pipeline_dir/subscripts/slurm_functionality.sh"
 
-    write_manifest_file "$output_dir/processing_files" \
+    write_slurm_meta_info_file "$output_dir/processing_files" \
                         "$output_dir/500_bpTrimmed_fastas" \
                         "$output_dir/sample_ID_list.txt" \
                         "$reference_db_prefix" \
                         "$coverage_modes" \
                         "$max_sequence_lengths" \
-                        "$output_dir/manifest.csv" \
+                        "$output_dir/slurm_meta_info.csv" \
                         "$output_dir/logs/run.log"
 
     #initate slurm runners
     start_slurm_runners "$conda_env_prefix" \
                         "$pipeline_dir" \
-                        "$output_dir/manifest.csv" \
+                        "$output_dir/slurm_meta_info.csv" \
                         "$max_jobs_per_array" \
                         "$slurm_cpus_per_job" \
                         "$slurm_memory_per_job" \
                         "$slurm_partition" \
                         "$pipeline_dir/subscripts/slurm_runner_worker.sh" \
                         "$output_dir/logs/run.log"
+
+    start_slurm_compiler "$conda_env_prefix" \
+                         "$pipeline_dir" \
+                         "$output_dir" \
+                         "$host_file" \
+                         "$reference_fasta_file" \
+                         "$slurm_memory_per_job" \
+                         "$slurm_partition" \
+                         "$pipeline_dir/subscripts/slurm_compiler_worker.sh" \
+                         "$output_dir/logs/run.log"
     ;;
     *) write_log "Invalid mode: $execution_mode" "ERROR" "$output_dir/logs/run.log"; exit 1 ;;
 esac

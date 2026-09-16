@@ -9,7 +9,7 @@
 # Author: Jon Slotved
 # Description: 
 #   Worker script for running SLURM jobs in the host element pipeline
-#   will run 1 row of the manifest file corresponding to the current SLURM array task
+#   will run 1 row of the SLURM metadata file corresponding to the current SLURM array task
 
 #duplication.. But necessary for standalone worker script
 write_log() {
@@ -31,7 +31,7 @@ while getopts "p:e:m:c:" opt; do
     case $opt in
         p) pipeline_dir="$OPTARG" ;;
         e) conda_env_prefix="$OPTARG" ;;
-        m) manifest_file="$OPTARG" ;;
+        m) slurm_meta_info_file="$OPTARG" ;;
         c) current_chunk="$OPTARG" ;;
         *) echo "you should not be passing anything here" ;;
     esac
@@ -41,7 +41,7 @@ source "$pipeline_dir/subscripts/mmseqs_functionality.sh"
 
 #find row, based on current chunk and SLURM auto-assigned array task ID
 #datarow: current_chunk,array_task_id,sample_name,trimmed_fasta,query_database_prefix,reference_database_prefix,results_directory,temporary_directory,coverage_modes,max_sequence_lengths
-data_row_for_worker=$(grep "^${current_chunk},${SLURM_ARRAY_TASK_ID}," "$manifest_file")
+data_row_for_worker=$(grep "^${current_chunk},${SLURM_ARRAY_TASK_ID}," "$slurm_meta_info_file")
 
 #read row: chunk, task, sample, trimmed fasta, query db, reference db, results, temporary, coverage modes, max lengths
 IFS=',' read -r _ _ sample_name trimmed_fasta query_database_prefix reference_database_prefix results_directory temporary_directory coverage_modes max_sequence_lengths <<< "$data_row_for_worker"
@@ -60,6 +60,12 @@ run_mmseqs_search_and_convert "$conda_env_prefix" \
                               "$temporary_directory" \
                               "$coverage_modes" \
                               "$max_sequence_lengths"
+
+compile_mmseqs_results_per_isolate "$conda_env_prefix" \
+                                   "$results_directory" \
+                                   "$pipeline_dir/database/elementgeneList.fasta" \
+                                   "$pipeline_dir/subscripts/mmseq2_results_replicate_combine.py" \
+                                   "$results_directory/logs/run.log"
 
 write_log "Finished MMseqs worker for $sample_name" "INFO"
 
