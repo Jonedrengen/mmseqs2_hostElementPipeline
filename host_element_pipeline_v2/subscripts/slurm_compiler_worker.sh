@@ -47,7 +47,7 @@ run_host_element_screen_processor \
 	"$output_dir/compiled_files/result_compiled" \
 	"$host_file" \
 	"$reference_fasta_file" \
-	"$output_dir"
+	"$output_dir/compiled_files/result_compiled"
 
 write_log "Finished SLURM compiler" "INFO" "$log_file"
 

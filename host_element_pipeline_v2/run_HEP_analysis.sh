@@ -90,6 +90,18 @@ validate_input() {
         echo
         sleep 3
     fi
+    if [[ -f "$host_file" ]]; then
+        local header_line=$'Genome_Ref\tHost'
+        local Host="Host"
+        if [[ $(grep -F "$header_line" "$host_file") ]]; then
+            write_log "Host file contains the required header: $header_line" "INFO"
+        else
+            write_log "Host file missing the required header: $header_line" "ERROR"
+            exit 1
+        fi
+    fi
+    
+
 }
 
 create_output_structure() {
@@ -307,7 +319,7 @@ case "$execution_mode" in
                                      "$output_dir/compiled_files/result_compiled" \
                                      "$host_file" \
                                      "$reference_fasta_file" \
-                                     "$output_dir"
+                                     "$output_dir/compiled_files/result_compiled"
     
     write_log "Finished local pipeline" "INFO" "$output_dir/logs/run.log"
     write_log " $(wc -l < "$output_dir/compiled_files/mmseq2_result_presence_absence.tsv") isolates compiled" "INFO" "$output_dir/logs/run.log"
@@ -316,6 +328,7 @@ case "$execution_mode" in
     write_log "Starting $execution_mode mode" "INFO" "$output_dir/logs/run.log"
     source "$pipeline_dir/subscripts/slurm_functionality.sh"
 
+    #writes a metafile, which contains information about the samples and the parameters for the SLURM jobs
     write_slurm_meta_info_file "$output_dir/processing_files" \
                         "$output_dir/500_bpTrimmed_fastas" \
                         "$output_dir/sample_ID_list.txt" \

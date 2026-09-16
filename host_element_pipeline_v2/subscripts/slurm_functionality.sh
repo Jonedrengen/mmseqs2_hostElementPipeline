@@ -128,7 +128,6 @@ start_slurm_runners() {
                --partition="$slurm_partition" \
                --job-name="mmseqs_worker_gogogogo" \
                "$slurm_worker_script" -p "$pipeline_dir" -e "$conda_env_prefix" -m "$slurm_meta_info_file_name" -c "$current_chunk"
-
     done
 
 }

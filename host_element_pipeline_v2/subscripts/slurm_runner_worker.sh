@@ -39,15 +39,15 @@ done
 
 source "$pipeline_dir/subscripts/mmseqs_functionality.sh"
 
-#find row, based on current chunk and SLURM auto-assigned array task ID
+#find row, based on current chunk and SLURM array task ID
 #datarow: current_chunk,array_task_id,sample_name,trimmed_fasta,query_database_prefix,reference_database_prefix,results_directory,temporary_directory,coverage_modes,max_sequence_lengths
 data_row_for_worker=$(grep "^${current_chunk},${SLURM_ARRAY_TASK_ID}," "$slurm_meta_info_file")
-
 #read row: chunk, task, sample, trimmed fasta, query db, reference db, results, temporary, coverage modes, max lengths
 IFS=',' read -r _ _ sample_name trimmed_fasta query_database_prefix reference_database_prefix results_directory temporary_directory coverage_modes max_sequence_lengths <<< "$data_row_for_worker"
+write_log "chunk=$current_chunk task=$SLURM_ARRAY_TASK_ID " "INFO"
+write_log "metadata row: $data_row_for_worker" "INFO"
 
 write_log "Starting MMseqs worker for $sample_name" "INFO"
-
 write_nucl_query_db "$conda_env_prefix" \
                     "$trimmed_fasta" \
                     "$query_database_prefix"
@@ -61,7 +61,7 @@ run_mmseqs_search_and_convert "$conda_env_prefix" \
                               "$coverage_modes" \
                               "$max_sequence_lengths"
 
-compile_mmseqs_results_per_isolate "$conda_env_prefix" \
+combine_mmseqs_results_per_isolate "$conda_env_prefix" \
                                    "$results_directory" \
                                    "$pipeline_dir/database/elementgeneList.fasta" \
                                    "$pipeline_dir/subscripts/mmseq2_results_replicate_combine.py" \

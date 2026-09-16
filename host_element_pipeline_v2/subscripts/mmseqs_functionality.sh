@@ -278,7 +278,8 @@ run_host_element_screen_processor() {
                                                                          "$fasta_gene_file" \
                                                                          "$output_dir"
     
-    if [[ $? -ne 0 ]]; then
+    local exit_status=$?
+    if [[ $exit_status -ne 0 ]]; then
         write_log "Failed to run host element screen processor" "ERROR" "$log_file"
     else
         write_log "Successfully ran host element screen processor" "INFO" "$log_file"
