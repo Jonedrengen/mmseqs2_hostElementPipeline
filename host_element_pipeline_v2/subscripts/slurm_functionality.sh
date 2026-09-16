@@ -51,69 +51,77 @@ write_manifest_file() {
 }
 
 start_slurm_runners() {
-    local manifest_file_name="$1"
+    local conda_env_prefix="$1"
+    local pipeline_dir="$2"
+    local manifest_file_name="$3"
 
-    local max_jobs_per_array="$2"
-    local slurm_cpus_per_job="$3"
-    local slurm_memory_per_job="$4"
-    local slurm_partition="$5"
+    local max_jobs_per_array="$4"
+    local slurm_cpus_per_job="$5"
+    local slurm_memory_per_job="$6"
+    local slurm_partition="$7"
 
-    local slurm_worker_script="$6"
-    local log_file="${7:-}"
+    local slurm_worker_script="$8"
+    local log_file="${9:-}"
 
     write_log "Starting SLURM runners with manifest file: $manifest_file_name" "INFO" "$log_file"
 
-    numJobs=$(wc -l < "$manifest_file_name")
+    local num_jobs
+    local slurm_chunks
+    local slurm_calc_run_parallel
+    num_jobs=$(wc -l < "$manifest_file_name")
 
     #used Edwards implementation - Jon Slotved
     #find slurm array size based on the number of jobs and maximum simultaneous jobs
-    if (( $numJobs % $max_jobs_per_array == 0 )); then
-        Slurm_chunks=$(($numJobs / $max_jobs_per_array))
+    if (( num_jobs % max_jobs_per_array == 0 )); then
+        slurm_chunks=$((num_jobs / max_jobs_per_array))
     else
-        Slurm_chunks=$(($numJobs / $max_jobs_per_array + 1)) # This is a ceiling int calculation
+        slurm_chunks=$((num_jobs / max_jobs_per_array + 1)) # This is a ceiling int calculation
     fi
     # Most used nodes 12, minimum is 1, it will only use 1 if its submits more than 6 batches
     # Please adjust these numbers accordingly to your specifications or HPC needs
     # Example: if samplelist contains 1000 files, it will submit 1 SlurmArray job that will run use 12 compute nodes at a time.
     # Example: if samplelist contains 10000 files, it will submit 10 SlurmArray jobs that will run only 1 compute node per SlurmArray job at a time.
-    if [ $Slurm_chunks == 1 ]
+    if [[ $slurm_chunks == 1 ]]
     then
-    Slurm_CalcRunParallel=12
+    slurm_calc_run_parallel=12
 
-    elif [ $Slurm_chunks == 2 ]
+    elif [[ $slurm_chunks == 2 ]]
     then
-    Slurm_CalcRunParallel=6
+    slurm_calc_run_parallel=6
 
-    elif [ $Slurm_chunks == 3 ]
+    elif [[ $slurm_chunks == 3 ]]
     then
-    Slurm_CalcRunParallel=4
+    slurm_calc_run_parallel=4
 
-    elif [ $Slurm_chunks == 4 ]
+    elif [[ $slurm_chunks == 4 ]]
     then
-    Slurm_CalcRunParallel=3
+    slurm_calc_run_parallel=3
 
-    elif [ $Slurm_chunks == 5 ]
+    elif [[ $slurm_chunks == 5 ]]
     then
-    Slurm_CalcRunParallel=2
+    slurm_calc_run_parallel=2
 
-    elif [ $Slurm_chunks == 6 ]
+    elif [[ $slurm_chunks == 6 ]]
     then
-    Slurm_CalcRunParallel=2
+    slurm_calc_run_parallel=2
 
     else
-    Slurm_CalcRunParallel=1
+    slurm_calc_run_parallel=1
     fi
 
-    write_log "running $(( Slurm_CalcRunParallel * Slurm_chunks )) jobs with $Slurm_CalcRunParallel jobs across $Slurm_chunks chunks in parallel" "INFO" "$log_file"
+    write_log "running $(( slurm_calc_run_parallel * slurm_chunks )) jobs with $slurm_calc_run_parallel jobs across $slurm_chunks chunks in parallel" "INFO" "$log_file"
 
-    for ((current_chunk=1; current_chunk<=Slurm_chunks; current_chunk++))
+    local current_chunk
+    local array_start
+    local array_end
+    for ((current_chunk=1; current_chunk<=slurm_chunks; current_chunk++))
     do
-        array_start=$(cat "$manifest_file_name" | grep "^$current_chunk" | head -n 1 | awk -F',' '{print $2}')
-        array_end=$(cat "$manifest_file_name" | grep "^$current_chunk" | tail -n 1 | awk -F',' '{print $2}')
+        array_start=$(grep "^${current_chunk}," "$manifest_file_name" | head -n 1 | cut -d',' -f2)
+        array_end=$(grep "^${current_chunk}," "$manifest_file_name" | tail -n 1 | cut -d',' -f2)
         echo "Array start for chunk $current_chunk: $array_start"
         echo "Array end for chunk $current_chunk: $array_end"
 
-        sbatch --array="$array_start-$array_end%$Slurm_CalcRunParallel" \
+        sbatch --array="$array_start-$array_end%$slurm_calc_run_parallel" \
                --cpus-per-task="$slurm_cpus_per_job" \
                --mem="$slurm_memory_per_job" \
                --partition="$slurm_partition" \

@@ -9,3 +9,4 @@ dependencies:
   - parallel
   - python=3.14
   - pandas
+  - xlsxwriter

@@ -30,7 +30,7 @@ help() {
     echo "  -c <config_file>     Configuration file specifying source directory and conda environment prefix"
     echo "  -h                   Display this help message"
     echo "Optional:"
-    echo "  -f <host_file>       Host file, tsv seperated, containing Sample_Name and Host"
+    echo "  -f <host_file>       Host file, tsv seperated, containing Genome_Ref and Host"
 }
 
 write_log() {
@@ -171,7 +171,7 @@ write_host_file() {
     
     : > "$host_file_name"
     #header
-    echo -e "Sample_Name\tHost" > "$host_file_name"
+    echo -e "Genome_Ref\tHost" > "$host_file_name"
     #loop over sample_list
     local sample_name
     while read -r sample; do
@@ -321,7 +321,9 @@ case "$execution_mode" in
                         "$output_dir/logs/run.log"
 
     #initate slurm runners
-    start_slurm_runners "$output_dir/manifest.csv" \
+    start_slurm_runners "$conda_env_prefix" \
+                        "$pipeline_dir" \
+                        "$output_dir/manifest.csv" \
                         "$max_jobs_per_array" \
                         "$slurm_cpus_per_job" \
                         "$slurm_memory_per_job" \

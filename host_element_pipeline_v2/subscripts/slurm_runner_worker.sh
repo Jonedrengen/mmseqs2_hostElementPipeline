@@ -36,14 +36,21 @@ while getopts "p:e:m:c:" opt; do
         *) echo "you should not be passing anything here" ;;
     esac
 done
+
 source "$pipeline_dir/subscripts/mmseqs_functionality.sh"
 
 #find row, based on current chunk and SLURM auto-assigned array task ID
 #datarow: current_chunk,array_task_id,sample_name,trimmed_fasta,query_database_prefix,reference_database_prefix,results_directory,temporary_directory,coverage_modes,max_sequence_lengths
-data_row_for_worker=$(awk -F',' -v chunk="$current_chunk" -v task_id="$SLURM_ARRAY_TASK_ID" '$1 == chunk && $2 == task_id {print}' "$manifest_file")
+data_row_for_worker=$(grep "^${current_chunk},${SLURM_ARRAY_TASK_ID}," "$manifest_file")
 
-#read row and skip the first four columns (current_chunk, array_task_id, sample_name, trimmed_fasta)
-IFS=',' read -r _ _ _ _ query_database_prefix reference_database_prefix results_directory temporary_directory coverage_modes max_sequence_lengths <<< "$data_row_for_worker"
+#read row: chunk, task, sample, trimmed fasta, query db, reference db, results, temporary, coverage modes, max lengths
+IFS=',' read -r _ _ sample_name trimmed_fasta query_database_prefix reference_database_prefix results_directory temporary_directory coverage_modes max_sequence_lengths <<< "$data_row_for_worker"
+
+write_log "Starting MMseqs worker for $sample_name" "INFO"
+
+write_nucl_query_db "$conda_env_prefix" \
+                    "$trimmed_fasta" \
+                    "$query_database_prefix"
 
 #run search script
 run_mmseqs_search_and_convert "$conda_env_prefix" \
@@ -53,5 +60,7 @@ run_mmseqs_search_and_convert "$conda_env_prefix" \
                               "$temporary_directory" \
                               "$coverage_modes" \
                               "$max_sequence_lengths"
+
+write_log "Finished MMseqs worker for $sample_name" "INFO"
 
 
