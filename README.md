@@ -40,7 +40,9 @@ bash host_element_pipeline_v2/run_HEP_analysis.sh \
 
 
 ## warnings
-for the referece/target fasta database. Avoid more than 1000 genes, as it could overload the system. -Edward Sung
+- usually requires minimum 16GB of system mem.
+- for the referece/target fasta database. Avoid more than 1000 genes, as it could overload the system. -Edward Sung
+
 
 ## Pipeline output tree
 
