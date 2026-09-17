@@ -231,13 +231,13 @@ compile_mmseqs_results() {
     #   2: compiled_files_dir
     #   3: log_file (optional)
     local processing_dir="$1"
-    local compiled_dir="$2"
+    local compiled_files_dir="$2"
     local log_file="${3:-}"
 
-    local result_compiled_dir="$compiled_dir/result_compiled"
-    local result_presence_dir="$compiled_dir/result_presence_absence"
-    local combined_results="$compiled_dir/mmseq2_result_compiled.tsv"
-    local combined_presence="$compiled_dir/mmseq2_result_presence_absence.tsv"
+    local result_compiled_dir="$compiled_files_dir/result_compiled"
+    local result_presence_dir="$compiled_files_dir/result_presence_absence"
+    local combined_results="$compiled_files_dir/mmseq2_result_compiled.tsv"
+    local combined_presence="$compiled_files_dir/mmseq2_result_presence_absence.tsv"
 
     mkdir -p "$result_compiled_dir" "$result_presence_dir"
     : > "$combined_results"
@@ -265,18 +265,19 @@ compile_mmseqs_results() {
     write_log "$(ls "$result_presence_dir" | wc -l) mmseqs presence/absence result files compiled successfully" "INFO" "$log_file"
 }
 
+
 run_host_element_screen_processor() {
     local conda_env_prefix="$1"
     local host_element_screen_processor_script="$2"
-    local compiled_dir="$3"
+    local compiled_files_dir="$3"
     local host_file="$4"
     local fasta_gene_file="$5"
     local output_dir="$6"
 
-    "$conda_env_prefix/bin/python" "$host_element_screen_processor_script" "$compiled_dir" \
-                                                                         "$host_file" \
-                                                                         "$fasta_gene_file" \
-                                                                         "$output_dir"
+    "$conda_env_prefix/bin/python" "$host_element_screen_processor_script" "$compiled_files_dir" \
+                                                                           "$host_file" \
+                                                                           "$fasta_gene_file" \
+                                                                           "$output_dir"
     
     local exit_status=$?
     if [[ $exit_status -ne 0 ]]; then
