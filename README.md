@@ -13,11 +13,34 @@ Create the environment from the included file:
 
 ```bash
 conda env create -f mmseq2_env.yml
-conda activate mmseqs2_JOSS
+conda activate mmseqs2_HEP
 ```
 
+## Usage
+
+Copy the template configuration file:
+
+```bash
+cp host_element_pipeline_v2/template_config.env host_element_pipeline_v2/config.env
+```
+
+set the paths and execution mode in your config.env. Then run the pipeline:
+
+- `-f /path/to/host_file.tsv` is optional. **NOTE:** if used, header must be "Genome_Ref  Host"
+- For SLURM, set `execution_mode=slurm` and submit the same script:
+
+```bash
+bash host_element_pipeline_v2/run_HEP_analysis.sh \
+    -i /path/to/input_fastas \
+    -o /path/to/output \
+    -c host_element_pipeline_v2/config.env \
+    -f /path/to/host_file.tsv
+```
+
+
+
 ## warnings
-for the referece/target database. Avoid more than 1000 genes, as it could overload the system
+for the referece/target fasta database. Avoid more than 1000 genes, as it could overload the system. -Edward Sung
 
 ## Pipeline output tree
 

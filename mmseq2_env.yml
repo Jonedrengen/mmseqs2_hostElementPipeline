@@ -1,4 +1,4 @@
-name: mmseqs2_JOSS
+name: mmseqs2_HEP
 channels:
   - conda-forge
   - bioconda
