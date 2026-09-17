@@ -147,11 +147,13 @@ load_config() {
         slurm_partition="$(grep '^slurm_partition=' "$config_file" | awk -F'=' '{print $2}')"
         max_jobs_per_array="$(grep '^max_jobs_per_array=' "$config_file" | awk -F'=' '{print $2}')"
         max_parallel_jobs_per_array="$(grep '^max_parallel_jobs_per_array=' "$config_file" | awk -F'=' '{print $2}')"
+        write_log "_______________slurm configurations_______________" "INFO" "$log_file"
         write_log "slurm_cpus_per_job=$slurm_cpus_per_job" "INFO" "$log_file"
         write_log "slurm_memory_per_job=$slurm_memory_per_job" "INFO" "$log_file"
         write_log "slurm_partition=$slurm_partition" "INFO" "$log_file"
         write_log "max_jobs_per_array=$max_jobs_per_array" "INFO" "$log_file"
         write_log "max_parallel_jobs_per_array=$max_parallel_jobs_per_array" "INFO" "$log_file"
+        write_log "_______________slurm configurations_______________" "INFO" "$log_file"
     fi
 
     #defining non config variables
@@ -159,7 +161,7 @@ load_config() {
         reference_fasta_file="$pipeline_dir/database/elementgeneList.fasta"
     fi
 
-    write_log "_______________configurations_______________" "INFO" "$log_file"
+    write_log "_______________general configurations_______________" "INFO" "$log_file"
     write_log "pipeline_dir=$pipeline_dir" "INFO" "$log_file"
     write_log "conda_env_prefix=$conda_env_prefix" "INFO" "$log_file"
     write_log "max_sequence_lengths=$max_sequence_lengths" "INFO" "$log_file"
@@ -172,7 +174,7 @@ load_config() {
     write_log "mmseqs_sensitivity=$mmseqs_sensitivity" "INFO" "$log_file"
     write_log "mmseqs_max_seqs=$mmseqs_max_seqs" "INFO" "$log_file"
     write_log "reference_fasta_file=$reference_fasta_file" "INFO" "$log_file"
-    write_log "_______________configurations_______________" "INFO" "$log_file"
+    write_log "_______________general configurations_______________" "INFO" "$log_file"
 }
 
 validate_config() {
