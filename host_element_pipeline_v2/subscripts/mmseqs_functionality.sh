@@ -187,7 +187,7 @@ parallel_mmseqs_searches() {
                                                                 ::: "${max_sequence_lengths_array[@]}"
 }
 
-#combine mmseqs search results per isolate
+#combine mmseqs search results per isolate (and cleans up temporary files)
 combine_mmseqs_results_per_isolate() {
     # Combines one isolate's mmseqs convertalis files into a single file.
     # Arguments:
