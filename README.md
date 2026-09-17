@@ -18,7 +18,7 @@ conda activate mmseqs2_HEP
 
 ## Usage
 
-Copy the template configuration file:
+make a new config, based on template configuration file. Just copy it:
 
 ```bash
 cp host_element_pipeline_v2/template_config.env host_element_pipeline_v2/config.env
@@ -26,7 +26,7 @@ cp host_element_pipeline_v2/template_config.env host_element_pipeline_v2/config.
 
 set the paths and execution mode in your config.env. Then run the pipeline:
 
-- `-f /path/to/host_file.tsv` is optional. **NOTE:** if used, header must be "Genome_Ref  Host"
+- `-f /path/to/host_file.tsv` is optional. **NOTE:** if used, see below for file struture
 - For SLURM, set `execution_mode=slurm` and submit the same script:
 
 ```bash
