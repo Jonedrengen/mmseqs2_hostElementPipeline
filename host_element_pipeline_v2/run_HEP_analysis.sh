@@ -384,7 +384,7 @@ case "$execution_mode" in
                                      "$output_dir/compiled_files/result_compiled"
     
     write_log "Finished local pipeline" "INFO" "$output_dir/logs/run.log"
-    write_log " $(wc -l < "$output_dir/compiled_files/mmseq2_result_presence_absence.tsv") isolates compiled" "INFO" "$output_dir/logs/run.log"
+    write_log " $(wc -l < "$output_dir/compiled_files/mmseq2_result_presence_absence.tsv")-1 (header) isolates compiled" "INFO" "$output_dir/logs/run.log"
     
     
     ;;
