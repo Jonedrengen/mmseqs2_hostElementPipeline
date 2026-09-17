@@ -272,7 +272,7 @@ remove_smalls() {
 #######################################
 ############# run script ##############
 #######################################
-
+main() {
 #global variables, argparsing and input validation
 input_dir=""
 output_dir=""
@@ -417,6 +417,7 @@ case "$execution_mode" in
                         "$slurm_memory_per_job" \
                         "$slurm_partition" \
                         "$pipeline_dir/subscripts/slurm_runner_worker.sh" \
+                        "$reference_fasta_file" \
                         "$output_dir/logs/run.log"
 
     start_slurm_compiler "$conda_env_prefix" \
@@ -431,3 +432,7 @@ case "$execution_mode" in
     ;;
     *) write_log "Invalid mode: $execution_mode" "ERROR" "$output_dir/logs/run.log"; exit 1 ;;
 esac
+}
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    main "$@"
+fi

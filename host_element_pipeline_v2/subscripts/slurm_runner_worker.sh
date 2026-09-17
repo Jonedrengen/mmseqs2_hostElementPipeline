@@ -24,12 +24,13 @@ write_log() {
 }
 
 #inputs for the SLURM worker script
-while getopts "p:e:m:c:" opt; do
+while getopts "p:e:m:c:r:" opt; do
     case $opt in
         p) pipeline_dir="$OPTARG" ;;
         e) conda_env_prefix="$OPTARG" ;;
         m) slurm_meta_info_file="$OPTARG" ;;
         c) current_chunk="$OPTARG" ;;
+        r) reference_fasta_file="$OPTARG" ;;
         *) echo "you should not be passing anything here" ;;
     esac
 done
@@ -65,7 +66,7 @@ run_mmseqs_search_and_convert "$conda_env_prefix" \
 
 combine_mmseqs_results_per_isolate "$conda_env_prefix" \
                                    "$results_directory" \
-                                   "$pipeline_dir/database/elementgeneList.fasta" \
+                                   "$reference_fasta_file" \
                                    "$pipeline_dir/subscripts/mmseq2_results_replicate_combine.py" \
                                    "$results_directory/logs/run.log"
 

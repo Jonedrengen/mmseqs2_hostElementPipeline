@@ -81,7 +81,8 @@ start_slurm_runners() {
     local slurm_partition="$8"
 
     local slurm_worker_script="$9"
-    local log_file="${10:-}"
+    local reference_fasta_file="${10}"
+    local log_file="${11:-}"
 
     write_log "Starting SLURM runners with SLURM metadata file: $slurm_meta_info_file_name" "INFO" "$log_file"
 
@@ -114,7 +115,7 @@ start_slurm_runners() {
                --partition="$slurm_partition" \
                --time=04:00:00 \
                --job-name="mmseqs_worker_gogogogo" \
-               "$slurm_worker_script" -p "$pipeline_dir" -e "$conda_env_prefix" -m "$slurm_meta_info_file_name" -c "$current_chunk"
+               "$slurm_worker_script" -p "$pipeline_dir" -e "$conda_env_prefix" -m "$slurm_meta_info_file_name" -c "$current_chunk" -r "$reference_fasta_file"
     done
 
 }
