@@ -1,11 +1,7 @@
 #!/usr/bin/env bash
-
 #SBATCH --job-name=mmseqs_compiler
-#SBATCH --cpus-per-task=1
-#SBATCH --mem=16G
 #SBATCH --output=mmseqs_compiler_%j.out
 #SBATCH --error=mmseqs_compiler_%j.err
-#SBATCH --time=04:00:00
 
 # Author: Jon Slotved
 # Description: Worker script for running SLURM jobs in the host element pipeline

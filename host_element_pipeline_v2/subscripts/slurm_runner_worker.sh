@@ -1,10 +1,7 @@
 #!/usr/bin/env bash
 #SBATCH --job-name=mmseqs_worker
-#SBATCH --cpus-per-task=1
-#SBATCH --mem=16G
 #SBATCH --output=mmseqs_worker_%A_%a.out
 #SBATCH --error=mmseqs_worker_%A_%a.err
-#SBATCH --time=04:00:00
 
 # Author: Jon Slotved
 # Description: 
@@ -40,10 +37,10 @@ done
 source "$pipeline_dir/subscripts/mmseqs_functionality.sh"
 
 #find row, based on current chunk and SLURM array task ID
-#datarow: current_chunk,array_task_id,sample_name,trimmed_fasta,query_database_prefix,reference_database_prefix,results_directory,temporary_directory,coverage_modes,max_sequence_lengths
+#datarow: current_chunk,array_task_id,sample_name,trimmed_fasta,query_database_prefix,reference_database_prefix,results_directory,temporary_directory,coverage_modes,max_sequence_lengths,mmseqs_min_seq_id,mmseqs_coverage,mmseqs_sensitivity,mmseqs_max_seqs
 data_row_for_worker=$(grep "^${current_chunk},${SLURM_ARRAY_TASK_ID}," "$slurm_meta_info_file")
-#read row: chunk, task, sample, trimmed fasta, query db, reference db, results, temporary, coverage modes, max lengths
-IFS=',' read -r _ _ sample_name trimmed_fasta query_database_prefix reference_database_prefix results_directory temporary_directory coverage_modes max_sequence_lengths <<< "$data_row_for_worker"
+#read row: chunk, task, sample, trimmed fasta, query db, reference db, results, temporary, coverage modes, max lengths, MMseqs settings
+IFS=',' read -r _ _ sample_name trimmed_fasta query_database_prefix reference_database_prefix results_directory temporary_directory coverage_modes max_sequence_lengths mmseqs_min_seq_id mmseqs_coverage mmseqs_sensitivity mmseqs_max_seqs <<< "$data_row_for_worker"
 write_log "chunk=$current_chunk task=$SLURM_ARRAY_TASK_ID " "INFO"
 write_log "metadata row: $data_row_for_worker" "INFO"
 
@@ -59,13 +56,19 @@ run_mmseqs_search_and_convert "$conda_env_prefix" \
                               "$results_directory" \
                               "$temporary_directory" \
                               "$coverage_modes" \
-                              "$max_sequence_lengths"
+                              "$max_sequence_lengths" \
+                              "$mmseqs_min_seq_id" \
+                              "$mmseqs_coverage" \
+                              "$mmseqs_sensitivity" \
+                              "$mmseqs_max_seqs" \
+                              "$results_directory/logs/run.log"
 
 combine_mmseqs_results_per_isolate "$conda_env_prefix" \
                                    "$results_directory" \
                                    "$pipeline_dir/database/elementgeneList.fasta" \
                                    "$pipeline_dir/subscripts/mmseq2_results_replicate_combine.py" \
                                    "$results_directory/logs/run.log"
+
 
 write_log "Finished MMseqs worker for $sample_name" "INFO"
 

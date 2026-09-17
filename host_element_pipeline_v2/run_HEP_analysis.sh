@@ -129,10 +129,16 @@ load_config() {
     
     pipeline_dir="$(grep '^source_directory=' "$config_file" | awk -F'=' '{print $2}')"
     conda_env_prefix="$(grep '^conda_env_prefix=' "$config_file" | awk -F'=' '{print $2}')"
+    reference_fasta_file="$(grep '^reference_fasta_file=' "$config_file" | awk -F'=' '{print $2}')"
     max_sequence_lengths="$(grep '^max_seq_lengths_array=' "$config_file" | awk -F'=' '{print $2}')"
     coverage_modes="$(grep '^cov_modes_array=' "$config_file" | awk -F'=' '{print $2}')"
-    execution_mode="$(grep '^mode=' "$config_file" | awk -F'=' '{print $2}')"
+    execution_mode="$(grep '^execution_mode=' "$config_file" | awk -F'=' '{print $2}')"
     base_host="$(grep '^base_host=' "$config_file" | awk -F'=' '{print $2}')"
+    fasta_pattern="$(grep '^fasta_pattern=' "$config_file" | awk -F'=' '{print $2}')"
+    mmseqs_min_seq_id="$(grep '^mmseqs_min_seq_id=' "$config_file" | awk -F'=' '{print $2}')"
+    mmseqs_coverage="$(grep '^mmseqs_coverage=' "$config_file" | awk -F'=' '{print $2}')"
+    mmseqs_sensitivity="$(grep '^mmseqs_sensitivity=' "$config_file" | awk -F'=' '{print $2}')"
+    mmseqs_max_seqs="$(grep '^mmseqs_max_seqs=' "$config_file" | awk -F'=' '{print $2}')"
 
     #if slurm mode, load slurm-specific settings
     if [[ $execution_mode == "slurm" ]]; then
@@ -149,24 +155,72 @@ load_config() {
     fi
 
     #defining non config variables
-    reference_fasta_file="$pipeline_dir/database/elementgeneList.fasta"
+    if [[ -z "$reference_fasta_file" ]]; then
+        reference_fasta_file="$pipeline_dir/database/elementgeneList.fasta"
+    fi
 
+    write_log "_______________configurations_______________" "INFO" "$log_file"
     write_log "pipeline_dir=$pipeline_dir" "INFO" "$log_file"
     write_log "conda_env_prefix=$conda_env_prefix" "INFO" "$log_file"
     write_log "max_sequence_lengths=$max_sequence_lengths" "INFO" "$log_file"
     write_log "coverage_modes=$coverage_modes" "INFO" "$log_file"
     write_log "execution_mode=$execution_mode" "INFO" "$log_file"
     write_log "base_host=$base_host" "INFO" "$log_file"
+    write_log "fasta_pattern=$fasta_pattern" "INFO" "$log_file"
+    write_log "mmseqs_min_seq_id=$mmseqs_min_seq_id" "INFO" "$log_file"
+    write_log "mmseqs_coverage=$mmseqs_coverage" "INFO" "$log_file"
+    write_log "mmseqs_sensitivity=$mmseqs_sensitivity" "INFO" "$log_file"
+    write_log "mmseqs_max_seqs=$mmseqs_max_seqs" "INFO" "$log_file"
     write_log "reference_fasta_file=$reference_fasta_file" "INFO" "$log_file"
+    write_log "_______________configurations_______________" "INFO" "$log_file"
+}
+
+validate_config() {
+    local log_file="${1:-}"
+    local config_values=()
+
+    config_values=(
+        pipeline_dir
+        conda_env_prefix
+        reference_fasta_file
+        execution_mode
+        fasta_pattern
+        base_host
+        mmseqs_min_seq_id
+        mmseqs_coverage
+        mmseqs_sensitivity
+        mmseqs_max_seqs
+        coverage_modes
+        max_sequence_lengths
+    )
+    if [[ -z $execution_mode ]]; then
+        write_log "Configuration value execution_mode is not set" "ERROR" "$log_file"
+        exit 1
+    fi
+    if [[ $execution_mode == "slurm" ]]; then
+        config_values+=(
+            slurm_cpus_per_job
+            slurm_memory_per_job
+            slurm_partition
+            max_jobs_per_array
+            max_parallel_jobs_per_array
+        )
+    fi
+    for config_value in "${config_values[@]}"; do
+        if [[ -z "${!config_value}" ]]; then
+            write_log "Configuration value $config_value is not set" "ERROR" "$log_file"
+            exit 1
+        fi
+    done
 }
 
 #sample ID "xxxx.fasta" per line
 write_sample_id_list() {
     local input_dir="$1"
     local sample_id_list_dir="$2"
-    local log_file="${3:-}"
+    local fasta_pattern="$3"
+    local log_file="${4:-}"
     local sample_id_list_file="$sample_id_list_dir/sample_ID_list.txt"
-    local fasta_pattern="*.f*"
 
     find -L "$input_dir" -maxdepth 1 -name "$fasta_pattern" -exec basename {} ';' > "$sample_id_list_file"
     local command_exit_status=$?
@@ -240,8 +294,9 @@ validate_input "$input_dir" "$output_dir" "$config_file" "$host_file"
 #setup
 create_output_structure "$output_dir" "$output_dir/logs/run.log"
 load_config "$config_file" "$output_dir/logs/run.log"
+validate_config "$output_dir/logs/run.log"
 write_version_info "$conda_env_prefix" "$output_dir/logs/run.log"
-write_sample_id_list "$input_dir" "$output_dir" "$output_dir/logs/run.log"
+write_sample_id_list "$input_dir" "$output_dir" "$fasta_pattern" "$output_dir/logs/run.log"
 #create default host file if not provided
 if [[ -z "$host_file" ]]; then
     write_log "Host file is not specified" "WARNING" "$output_dir/logs/run.log"
@@ -298,6 +353,10 @@ case "$execution_mode" in
                             "$reference_db_prefix" \
                             "$max_sequence_lengths" \
                             "$coverage_modes" \
+                            "$mmseqs_min_seq_id" \
+                            "$mmseqs_coverage" \
+                            "$mmseqs_sensitivity" \
+                            "$mmseqs_max_seqs" \
                             "$output_dir/logs/run.log"
 
     #combine the mmseqs search results per isolate
@@ -324,8 +383,12 @@ case "$execution_mode" in
     
     write_log "Finished local pipeline" "INFO" "$output_dir/logs/run.log"
     write_log " $(wc -l < "$output_dir/compiled_files/mmseq2_result_presence_absence.tsv") isolates compiled" "INFO" "$output_dir/logs/run.log"
+    
+    
     ;;
     slurm)
+
+
     write_log "Starting $execution_mode mode" "INFO" "$output_dir/logs/run.log"
     source "$pipeline_dir/subscripts/slurm_functionality.sh"
 
@@ -336,6 +399,10 @@ case "$execution_mode" in
                         "$reference_db_prefix" \
                         "$coverage_modes" \
                         "$max_sequence_lengths" \
+                        "$mmseqs_min_seq_id" \
+                        "$mmseqs_coverage" \
+                        "$mmseqs_sensitivity" \
+                        "$mmseqs_max_seqs" \
                         "$max_jobs_per_array" \
                         "$output_dir/slurm_meta_info.csv" \
                         "$output_dir/logs/run.log"

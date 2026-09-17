@@ -5,17 +5,36 @@
 
 # this is the same as Edwards implementation with chunk in col 1 and task in col 2
 # Structure of the SLURM metadata file:
-# chunk_id,task_id,sample_name,trimmed_fasta,query_database_prefix,reference_database_prefix,results_directory,temporary_directory,cov_modes,max_seq_lengths
+# chunk_id,task_id,sample_name,trimmed_fasta,query_database_prefix,reference_database_prefix,results_directory,temporary_directory,cov_modes,max_seq_lengths,mmseqs_min_seq_id,mmseqs_coverage,mmseqs_sensitivity,mmseqs_max_seqs
 write_slurm_meta_info_file() {
+    # Arguments:
+    #   1: processing_files_dir       <path> e.g. /analysis/processing_files
+    #   2: trimmed_fasta_dir           <path> e.g. /analysis/500_bpTrimmed_fastas
+    #   3: sample_id_list_file         <path> e.g. /analysis/sample_ID_list.txt
+    #   4: reference_database_prefix  <path> e.g. /analysis/tmp/reference_db/reference_nucl_db_type_2
+    #   5: cov_modes_array             <space-separated INTs>
+    #   6: max_seq_lengths_array       <space-separated INTs>
+    #   7: mmseqs_min_seq_id           <number>
+    #   8: mmseqs_coverage             <number>
+    #   9: mmseqs_sensitivity          <number>
+    #   10: mmseqs_max_seqs            <integer>
+    #   11: max_jobs_per_array         <integer>
+    #   12: slurm_meta_info_file_name  <path> e.g. /analysis/slurm_meta_info.csv
+    #   13: log_file                   <path> e.g. /analysis/logs/run.log (optional; last argument)
+
     local processing_files_dir="$1"
     local trimmed_fasta_dir="$2"
     local sample_id_list_file="$3"
     local reference_database_prefix="$4"
     local cov_modes_array="$5"
     local max_seq_lengths_array="$6"
-    local max_jobs_per_array="$7"
-    local slurm_meta_info_file_name="$8"
-    local log_file="${9:-}"
+    local mmseqs_min_seq_id="$7"
+    local mmseqs_coverage="$8"
+    local mmseqs_sensitivity="$9"
+    local mmseqs_max_seqs="${10}"
+    local max_jobs_per_array="${11}"
+    local slurm_meta_info_file_name="${12}"
+    local log_file="${13:-}"
 
     local array_task_id_counter=0
     local current_chunk=1
@@ -32,8 +51,8 @@ write_slurm_meta_info_file() {
 
         local temporary_directory="$sample_directory/tmp"
 
-        printf "%d,%d,%s,%s,%s,%s,%s,%s,%s,%s\n" \
-               "$current_chunk" "$array_task_id_counter" "$sample_name" "$trimmed_fasta" "$query_database_prefix" "$reference_database_prefix" "$results_directory" "$temporary_directory" "$cov_modes_array" "$max_seq_lengths_array" \
+         printf "%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n" \
+             "$current_chunk" "$array_task_id_counter" "$sample_name" "$trimmed_fasta" "$query_database_prefix" "$reference_database_prefix" "$results_directory" "$temporary_directory" "$cov_modes_array" "$max_seq_lengths_array" "$mmseqs_min_seq_id" "$mmseqs_coverage" "$mmseqs_sensitivity" "$mmseqs_max_seqs" \
                >> "$slurm_meta_info_file_name"
 
         ((array_task_id_counter++))
@@ -93,6 +112,7 @@ start_slurm_runners() {
                --cpus-per-task="$slurm_cpus_per_job" \
                --mem="$slurm_memory_per_job" \
                --partition="$slurm_partition" \
+               --time=04:00:00 \
                --job-name="mmseqs_worker_gogogogo" \
                "$slurm_worker_script" -p "$pipeline_dir" -e "$conda_env_prefix" -m "$slurm_meta_info_file_name" -c "$current_chunk"
     done
@@ -116,6 +136,7 @@ start_slurm_compiler() {
            --cpus-per-task=1 \
            --mem="$slurm_memory_per_job" \
            --partition="$slurm_partition" \
+           --time=04:00:00 \
            --job-name="mmseqs_worker_gogogogo" \
            "$slurm_compiler_script" -p "$pipeline_dir" \
                                     -e "$conda_env_prefix" \

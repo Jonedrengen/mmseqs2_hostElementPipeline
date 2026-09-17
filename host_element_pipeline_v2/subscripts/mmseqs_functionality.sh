@@ -65,7 +65,11 @@ run_mmseqs_search_and_convert() {
     #   5: temporary_directory     <path>
     #   6: coverage_modes          <space-separated INTs>
     #   7: max_sequence_lengths    <space-separated INTs>
-    #   8: log_file                <path> (optional)
+    #   8: mmseqs_min_seq_id       <number> (optional)
+    #   9: mmseqs_coverage        <number> (optional)
+    #   10: mmseqs_sensitivity     <number> (optional)
+    #   11: mmseqs_max_seqs        <integer> (optional)
+    #   12: log_file                <path> (optional)
 
     local conda_env_prefix="$1"
     local query_database_prefix="$2"
@@ -74,7 +78,11 @@ run_mmseqs_search_and_convert() {
     local temporary_directory="$5"
     local coverage_modes="$6"
     local max_sequence_lengths="$7"
-    local log_file="${8:-}"
+    local mmseqs_min_seq_id="${8:-0.8}"
+    local mmseqs_coverage="${9:-0.8}"
+    local mmseqs_sensitivity="${10:-7.5}"
+    local mmseqs_max_seqs="${11:-1000}"
+    local log_file="${12:-}"
 
     local query_database_name
     query_database_name=$(basename "$query_database_prefix")
@@ -99,10 +107,10 @@ run_mmseqs_search_and_convert() {
                                                            --search-type 3 \
                                                            --cov-mode "$coverage_mode" \
                                                            --max-seq-len "$max_sequence_length" \
-                                                           --min-seq-id 0.8 \
-                                                           -c 0.8 \
-                                                           -s 7.5 \
-                                                           --max-seqs 1000 \
+                                                           --min-seq-id "$mmseqs_min_seq_id" \
+                                                           -c "$mmseqs_coverage" \
+                                                           -s "$mmseqs_sensitivity" \
+                                                           --max-seqs "$mmseqs_max_seqs" \
                                                            --threads 1 \
                                                            -a \
                                                            --mask 0 \
@@ -152,7 +160,11 @@ parallel_mmseqs_searches() {
     #   3: reference_db_prefix  <path>   : path to the nucleotide reference database prefix
     #   4: max_sequence_lengths <STRING> : space-separated maximum sequence lengths
     #   5: coverage_modes       <STRING> : space-separated coverage modes
-    #   6: log_file                <path>   : (optional)
+    #   6: mmseqs_min_seq_id     <number> : (optional)
+    #   7: mmseqs_coverage       <number> : (optional)
+    #   8: mmseqs_sensitivity    <number> : (optional)
+    #   9: mmseqs_max_seqs      <integer> : (optional)
+    #   10: log_file             <path> : (optional)
     # Notes:
     #   Should decouple mmseqs and conversion steps
 
@@ -161,7 +173,11 @@ parallel_mmseqs_searches() {
     local reference_db_prefix="$3"
     local max_sequence_lengths="$4"
     local coverage_modes="$5"
-    local log_file="${6:-}"
+    local mmseqs_min_seq_id="${6:-0.8}"
+    local mmseqs_coverage="${7:-0.8}"
+    local mmseqs_sensitivity="${8:-7.5}"
+    local mmseqs_max_seqs="${9:-1000}"
+    local log_file="${10:-}"
 
     # strings to arrays, because GNU parallel need arrays for ::: expansion
     local -a max_sequence_lengths_array=()
@@ -180,6 +196,10 @@ parallel_mmseqs_searches() {
                                                                 "{1}/tmp" \
                                                                 "{3}" \
                                                                 "{4}" \
+                                                                "$mmseqs_min_seq_id" \
+                                                                "$mmseqs_coverage" \
+                                                                "$mmseqs_sensitivity" \
+                                                                "$mmseqs_max_seqs" \
                                                                 "$log_file" \
                                                                 ::: "$processing_dir"/* \
                                                                 ::: "$reference_db_prefix" \
@@ -187,7 +207,7 @@ parallel_mmseqs_searches() {
                                                                 ::: "${max_sequence_lengths_array[@]}"
 }
 
-#combine mmseqs search results per isolate (and cleans up temporary files)
+#combine mmseqs search results per isolate
 combine_mmseqs_results_per_isolate() {
     # Combines one isolate's mmseqs convertalis files into a single file.
     # Arguments:
@@ -222,9 +242,11 @@ combine_mmseqs_results_per_isolate() {
     else
         write_log "Successfully combined mmseqs results for $sample_id" "INFO"
     fi
+
 }
 
 # combine all per-isolate result files into one - Edwards compiler method
+# Jon: Added cleanup aswell (remove dbs)
 compile_mmseqs_results() {
     # Arguments:
     #   1: processing_files_dir
@@ -260,9 +282,15 @@ compile_mmseqs_results() {
         tail -n +2 "$sample_dir/${sample_id}_mmseq2_result_presence_absence.tsv" >> "$combined_presence"
         cp "$sample_dir/${sample_id}_mmseq2_result_compiled.tsv" "$result_compiled_dir/"
         cp "$sample_dir/${sample_id}_mmseq2_result_presence_absence.tsv" "$result_presence_dir/"
+
+        #clean up databases
+        rm -rf "$sample_dir/query_nucl_db"
+        rm -rf "$sample_dir/results_db"
+        rm -rf "$sample_dir/tmp"
     done
     write_log "$(ls "$result_compiled_dir" | wc -l) mmseqs result files compiled successfully" "INFO" "$log_file"
     write_log "$(ls "$result_presence_dir" | wc -l) mmseqs presence/absence result files compiled successfully" "INFO" "$log_file"
+    write_log "cleaned up mmseqs databases" "INFO" "$log_file"
 }
 
 
