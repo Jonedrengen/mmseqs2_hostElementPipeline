@@ -45,6 +45,9 @@ run_host_element_screen_processor \
 	"$reference_fasta_file" \
 	"$output_dir/compiled_files/result_compiled"
 
+mv "$SLURM_SUBMIT_DIR/mmseqs_compiler_${SLURM_JOB_ID}.out" "$output_dir/compiled_files"
+mv "$SLURM_SUBMIT_DIR/mmseqs_compiler_${SLURM_JOB_ID}.err" "$output_dir/compiled_files"
+
 write_log "Finished SLURM compiler" "INFO" "$log_file"
 
 
