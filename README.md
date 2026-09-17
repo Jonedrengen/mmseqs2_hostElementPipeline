@@ -45,6 +45,8 @@ for the referece/target fasta database. Avoid more than 1000 genes, as it could 
 ## Pipeline output tree
 
 The pipeline writes this structure under the output directory:
+`result_compiled_Main_Data.xlsx` contains summary stats over gene presence
+`result_compiled_element_presence.tsv` is the MGE element presence/absence matrix
 
 ```text
 output/
