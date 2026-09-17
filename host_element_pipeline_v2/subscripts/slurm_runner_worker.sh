@@ -71,8 +71,8 @@ combine_mmseqs_results_per_isolate "$conda_env_prefix" \
                                    "$results_directory/logs/run.log"
 
 #moving slurm stuff
-mv "$SLURM_SUBMIT_DIR/mmseqs_worker_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}.out" "$results_directory/"
-mv "$SLURM_SUBMIT_DIR/mmseqs_worker_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}.err" "$results_directory/"
+mv "$SLURM_SUBMIT_DIR/mmseqs_worker_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}.out" "$(dirname "$results_directory")"
+mv "$SLURM_SUBMIT_DIR/mmseqs_worker_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}.err" "$(dirname "$results_directory")"
 
 write_log "Finished MMseqs worker for $sample_name" "INFO"
 
