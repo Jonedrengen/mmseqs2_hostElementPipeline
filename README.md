@@ -72,6 +72,8 @@ output/
 │   │   └── <sample>_mmseq2_result_compiled.tsv
 │   └── result_presence_absence/
 │       └── <sample>_mmseq2_result_presence_absence.tsv
+└── logs/
+    └── run.log
 ```
 
 ## Some of the output files
