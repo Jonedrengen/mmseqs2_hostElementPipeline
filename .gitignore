@@ -3,6 +3,7 @@
 host_element_pipeline/
 tests/
 data/
+host_element_pipeline_v2/database/BA*
 
 #files
 old_mmseqs_parameters.txt

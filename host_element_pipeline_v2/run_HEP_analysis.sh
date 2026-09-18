@@ -231,6 +231,7 @@ write_sample_id_list() {
         write_log "wrote $(wc -l < "$sample_id_list_file") sample IDs to $sample_id_list_file" "INFO" "$log_file"
     else
         write_log "Failed to write sample ID list to $sample_id_list_file" "ERROR" "$log_file"
+        exit 1
     fi
 
 }
