@@ -13,7 +13,6 @@ Create the environment from the included file:
 
 ```bash
 conda env create -f mmseq2_env.yml
-conda activate mmseqs2_HEP
 ```
 
 ## Usage
