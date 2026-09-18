@@ -41,6 +41,7 @@ bash host_element_pipeline_v2/run_HEP_analysis.sh \
 ## warnings
 - usually requires minimum 16GB of system mem.
 - for the referece/target fasta database. Avoid more than 1000 genes, as it could overload the system. -Edward Sung
+- make sure genes who are part of the same MGE have the same prefix. This assures not mistaken merges
 
 
 ## Pipeline output tree
@@ -105,3 +106,4 @@ Genome_Ref	EL01	EL35	EL40 ...
 Animal5	1	0	1 ...
 Human2	1	1	1 ...
 ```
+
