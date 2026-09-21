@@ -3,6 +3,25 @@
 # Author: Jon Slotved
 # Description: Functionality script for handling SLURM job submissions in the host element pipeline
 
+
+load_module() {
+    local module_to_load="$1"
+    local log_file="${2:-}"
+    if [[ -n "$module_to_load" ]]; then
+        module load "$module_to_load"
+        local exit_code=$?
+        if [[ $exit_code -ne 0 ]]; then
+            write_log "failed to load module: $module_to_load, with exit code $exit_code" "ERROR" "$log_file"
+            exit $exit_code
+        else
+            write_log "loaded module: $module_to_load" "INFO" "$log_file"
+        fi
+    else
+        write_log "no module provided to load" "INFO" "$log_file"
+    fi
+}
+
+
 # this is the same as Edwards implementation with chunk in col 1 and task in col 2
 # Structure of the SLURM metadata file:
 # chunk_id,task_id,sample_name,trimmed_fasta,query_database_prefix,reference_database_prefix,results_directory,temporary_directory,cov_modes,max_seq_lengths,mmseqs_min_seq_id,mmseqs_coverage,mmseqs_sensitivity,mmseqs_max_seqs
@@ -68,6 +87,7 @@ write_slurm_meta_info_file() {
         write_log "Failed to write SLURM metadata file: $slurm_meta_info_file_name" "ERROR" "$log_file"
     fi
 }
+
 
 start_slurm_runners() {
     local conda_env_prefix="$1"
