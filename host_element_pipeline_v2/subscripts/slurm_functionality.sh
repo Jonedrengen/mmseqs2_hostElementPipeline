@@ -5,7 +5,7 @@
 
 
 load_module() {
-    local module_to_load="$1"
+    local module_to_load="${1:-}"
     local log_file="${2:-}"
     if [[ -n "$module_to_load" ]]; then
         module load "$module_to_load"
@@ -58,7 +58,7 @@ write_slurm_meta_info_file() {
     local array_task_id_counter=0
     local current_chunk=1
 
-    # Write one row per isolate; the worker owns all searches for that isolate.
+    # Write one row per isolate; the worker does all searches for that isolate.
     : > "$slurm_meta_info_file_name"
     while read -r sample_filename; do
         local sample_name
@@ -102,7 +102,8 @@ start_slurm_runners() {
 
     local slurm_worker_script="$9"
     local reference_fasta_file="${10}"
-    local log_file="${11:-}"
+    local module_to_load="${11:-}"
+    local log_file="${12:-}"
 
     write_log "Starting SLURM runners with SLURM metadata file: $slurm_meta_info_file_name" "INFO" "$log_file"
 
@@ -135,7 +136,12 @@ start_slurm_runners() {
                --partition="$slurm_partition" \
                --time=04:00:00 \
                --job-name="mmseqs_worker_gogogogo" \
-               "$slurm_worker_script" -p "$pipeline_dir" -e "$conda_env_prefix" -m "$slurm_meta_info_file_name" -c "$current_chunk" -r "$reference_fasta_file"
+             "$slurm_worker_script" -p "$pipeline_dir" \
+                                    -e "$conda_env_prefix" \
+                                    -s "$slurm_meta_info_file_name" \
+                                    -c "$current_chunk" \
+                                    -r "$reference_fasta_file" \
+                                    -m "$module_to_load"
     done
 
 }
@@ -149,7 +155,8 @@ start_slurm_compiler() {
     local slurm_memory_per_job="$6"
     local slurm_partition="$7"
     local slurm_compiler_script="$8"
-    local log_file="${9:-}"
+    local module_to_load="${9:-}"
+    local log_file="${10:-}"
 
     write_log "SLURM compiler" "INFO" "$log_file"
 
@@ -164,6 +171,7 @@ start_slurm_compiler() {
                                     -o "$output_dir" \
                                     -h "$host_file" \
                                     -r "$reference_fasta_file" \
+                                    -m "$module_to_load" \
                                     -l "$log_file"
 }
 

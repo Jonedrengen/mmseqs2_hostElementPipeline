@@ -18,19 +18,22 @@ write_log() {
 	fi
 }
 
-while getopts "p:e:o:h:r:l:" opt; do
+while getopts "p:e:o:h:r:m:l:" opt; do
 	case $opt in
 		p) pipeline_dir="$OPTARG" ;;
 		e) conda_env_prefix="$OPTARG" ;;
 		o) output_dir="$OPTARG" ;;
 		h) host_file="$OPTARG" ;;
 		r) reference_fasta_file="$OPTARG" ;;
+		m) module_to_load="$OPTARG" ;;
 		l) log_file="$OPTARG" ;;
 		*) echo "you should not be passing anything here" ;;
 	esac
 done
 
 source "$pipeline_dir/subscripts/mmseqs_functionality.sh"
+source "$pipeline_dir/subscripts/slurm_functionality.sh"
+load_module "$module_to_load" "$log_file"
 
 compile_mmseqs_results \
 	"$output_dir/processing_files" \

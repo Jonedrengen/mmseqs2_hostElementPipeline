@@ -142,12 +142,14 @@ load_config() {
 
     #if slurm mode, load slurm-specific settings
     if [[ $execution_mode == "slurm" ]]; then
+        module_to_load="$(grep '^module_to_load=' "$config_file" | awk -F'=' '{print $2}')"
         slurm_cpus_per_job="$(grep '^slurm_cpus_per_job=' "$config_file" | awk -F'=' '{print $2}')"
         slurm_memory_per_job="$(grep '^slurm_memory_per_job=' "$config_file" | awk -F'=' '{print $2}')"
         slurm_partition="$(grep '^slurm_partition=' "$config_file" | awk -F'=' '{print $2}')"
         max_jobs_per_array="$(grep '^max_jobs_per_array=' "$config_file" | awk -F'=' '{print $2}')"
         max_parallel_jobs_per_array="$(grep '^max_parallel_jobs_per_array=' "$config_file" | awk -F'=' '{print $2}')"
         write_log "_______________slurm configurations_______________" "INFO" "$log_file"
+        write_log "module_to_load=$module_to_load" "INFO" "$log_file"
         write_log "slurm_cpus_per_job=$slurm_cpus_per_job" "INFO" "$log_file"
         write_log "slurm_memory_per_job=$slurm_memory_per_job" "INFO" "$log_file"
         write_log "slurm_partition=$slurm_partition" "INFO" "$log_file"
@@ -201,6 +203,7 @@ validate_config() {
     fi
     if [[ $execution_mode == "slurm" ]]; then
         config_values+=(
+            module_to_load
             slurm_cpus_per_job
             slurm_memory_per_job
             slurm_partition
@@ -294,10 +297,17 @@ done
 
 validate_input "$input_dir" "$output_dir" "$config_file" "$host_file"
 
-#setup
+#___setup____
 create_output_structure "$output_dir" "$output_dir/logs/run.log"
 load_config "$config_file" "$output_dir/logs/run.log"
 validate_config "$output_dir/logs/run.log"
+
+# sometimes module loading is needed
+if [[ "$execution_mode" == "slurm" ]]; then
+    source "$pipeline_dir/subscripts/slurm_functionality.sh"
+    load_module "$module_to_load" "$output_dir/logs/run.log"
+fi
+
 write_version_info "$conda_env_prefix" "$output_dir/logs/run.log"
 write_sample_id_list "$input_dir" "$output_dir" "$fasta_pattern" "$output_dir/logs/run.log"
 #create default host file if not provided
@@ -391,9 +401,7 @@ case "$execution_mode" in
     ;;
     slurm)
 
-
     write_log "Starting $execution_mode mode" "INFO" "$output_dir/logs/run.log"
-    source "$pipeline_dir/subscripts/slurm_functionality.sh"
 
     #writes a metafile, which contains information about the samples and the parameters for the SLURM jobs
     write_slurm_meta_info_file "$output_dir/processing_files" \
@@ -421,6 +429,7 @@ case "$execution_mode" in
                         "$slurm_partition" \
                         "$pipeline_dir/subscripts/slurm_runner_worker.sh" \
                         "$reference_fasta_file" \
+                        "$module_to_load" \
                         "$output_dir/logs/run.log"
 
     start_slurm_compiler "$conda_env_prefix" \
@@ -431,6 +440,7 @@ case "$execution_mode" in
                          "$slurm_memory_per_job" \
                          "$slurm_partition" \
                          "$pipeline_dir/subscripts/slurm_compiler_worker.sh" \
+                         "$module_to_load" \
                          "$output_dir/logs/run.log"
     ;;
     *) write_log "Invalid mode: $execution_mode" "ERROR" "$output_dir/logs/run.log"; exit 1 ;;

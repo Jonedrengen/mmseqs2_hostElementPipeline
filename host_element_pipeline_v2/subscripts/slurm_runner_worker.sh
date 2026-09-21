@@ -24,19 +24,21 @@ write_log() {
 }
 
 #inputs for the SLURM worker script
-while getopts "p:e:m:c:r:" opt; do
+while getopts "p:e:m:c:r:s:" opt; do
     case $opt in
         p) pipeline_dir="$OPTARG" ;;
         e) conda_env_prefix="$OPTARG" ;;
-        m) slurm_meta_info_file="$OPTARG" ;;
+        s) slurm_meta_info_file="$OPTARG" ;;
         c) current_chunk="$OPTARG" ;;
         r) reference_fasta_file="$OPTARG" ;;
+        m) module_to_load="$OPTARG" ;;
         *) echo "you should not be passing anything here" ;;
     esac
 done
 
 source "$pipeline_dir/subscripts/mmseqs_functionality.sh"
-
+source "$pipeline_dir/subscripts/slurm_functionality.sh"
+load_module "$module_to_load"
 #find row, based on current chunk and SLURM array task ID
 #datarow: current_chunk,array_task_id,sample_name,trimmed_fasta,query_database_prefix,reference_database_prefix,results_directory,temporary_directory,coverage_modes,max_sequence_lengths,mmseqs_min_seq_id,mmseqs_coverage,mmseqs_sensitivity,mmseqs_max_seqs
 data_row_for_worker=$(grep "^${current_chunk},${SLURM_ARRAY_TASK_ID}," "$slurm_meta_info_file")
