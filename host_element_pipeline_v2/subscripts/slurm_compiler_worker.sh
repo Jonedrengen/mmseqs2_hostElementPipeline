@@ -6,6 +6,9 @@
 # Author: Jon Slotved
 # Description: Worker script for running SLURM jobs in the host element pipeline
 
+#specifically for pegasus:
+export LC_CTYPE=C.UTF-8
+
 write_log() {
 	local log_message="${1:-No log message provided}"
 	local log_type="${2:-INFO}"

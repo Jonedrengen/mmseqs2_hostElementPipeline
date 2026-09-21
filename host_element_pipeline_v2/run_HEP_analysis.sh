@@ -20,6 +20,13 @@
 #   run_mmseqs_search_and_convert and parallel_mmseqs_searches are 1 cohesive unit
 
 #######################################
+############# globals #################
+#######################################
+
+#These are for perl. Apparently not set default on some systems (pegasus...)
+export LC_CTYPE=C.UTF-8
+
+#######################################
 ############# helper functions ########
 #######################################
 

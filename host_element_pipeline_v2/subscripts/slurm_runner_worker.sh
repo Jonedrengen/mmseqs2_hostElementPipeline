@@ -8,6 +8,9 @@
 #   Worker script for running SLURM jobs in the host element pipeline
 #   will run 1 row of the SLURM metadata file corresponding to the current SLURM array task
 
+# specifically for pegasus:
+export LC_CTYPE=C.UTF-8
+
 #duplication.. But necessary for standalone worker script
 write_log() {
     local log_message="${1:-No log message provided}"
