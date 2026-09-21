@@ -210,7 +210,6 @@ validate_config() {
     fi
     if [[ $execution_mode == "slurm" ]]; then
         config_values+=(
-            module_to_load
             slurm_cpus_per_job
             slurm_memory_per_job
             slurm_partition
