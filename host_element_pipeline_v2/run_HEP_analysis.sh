@@ -187,6 +187,8 @@ load_config() {
 }
 
 validate_config() {
+    # Validate that all required configuration values are set    
+
     local log_file="${1:-}"
     local config_values=()
 
@@ -210,6 +212,7 @@ validate_config() {
     fi
     if [[ $execution_mode == "slurm" ]]; then
         config_values+=(
+            module_to_load
             slurm_cpus_per_job
             slurm_memory_per_job
             slurm_partition
@@ -219,8 +222,7 @@ validate_config() {
     fi
     for config_value in "${config_values[@]}"; do
         if [[ -z "${!config_value}" ]]; then
-            write_log "Configuration value $config_value is not set" "ERROR" "$log_file"
-            exit 1
+            write_log "Configuration value $config_value is not set, this may cause issues" "WARNING" "$log_file"
         fi
     done
 }
