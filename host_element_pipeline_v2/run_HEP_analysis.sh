@@ -23,7 +23,7 @@
 ############# globals #################
 #######################################
 
-#These are for perl. Apparently not set default on some systems (pegasus...)
+#These are for perl. Apparently some systems have wrong settings (pegasus...)
 export LC_CTYPE=C.UTF-8
 
 #######################################
@@ -309,13 +309,9 @@ validate_input "$input_dir" "$output_dir" "$config_file" "$host_file"
 create_output_structure "$output_dir" "$output_dir/logs/run.log"
 load_config "$config_file" "$output_dir/logs/run.log"
 validate_config "$output_dir/logs/run.log"
-
-# sometimes module loading is needed
-if [[ "$execution_mode" == "slurm" ]]; then
-    source "$pipeline_dir/subscripts/slurm_functionality.sh"
-    load_module "$module_to_load" "$output_dir/logs/run.log"
-fi
-
+source "$pipeline_dir/subscripts/slurm_functionality.sh"
+source "$pipeline_dir/subscripts/mmseqs_functionality.sh"
+load_module "$module_to_load" "$output_dir/logs/run.log"
 write_version_info "$conda_env_prefix" "$output_dir/logs/run.log"
 write_sample_id_list "$input_dir" "$output_dir" "$fasta_pattern" "$output_dir/logs/run.log"
 #create default host file if not provided
@@ -331,10 +327,6 @@ if [[ -z "$host_file" ]]; then
     host_file="$output_dir/host_file.tsv"
     write_log "wrote host file: $(head -n 5 "$host_file")" "INFO" "$output_dir/logs/run.log"
 fi
-
-
-#source mmseqs functionality
-source "$pipeline_dir/subscripts/mmseqs_functionality.sh"
 
 #removing sequences shorter than 500bp
 remove_smalls "$pipeline_dir/subscripts/removesmalls.pl" \
@@ -454,6 +446,7 @@ case "$execution_mode" in
     *) write_log "Invalid mode: $execution_mode" "ERROR" "$output_dir/logs/run.log"; exit 1 ;;
 esac
 }
-if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
     main "$@"
 fi
