@@ -164,7 +164,7 @@ start_slurm_compiler() {
            --cpus-per-task=1 \
            --mem="$slurm_memory_per_job" \
            --partition="$slurm_partition" \
-           --time=04:00:00 \
+           --time=24:00:00 \
            --job-name="mmseqs_worker_gogogogo" \
            "$slurm_compiler_script" -p "$pipeline_dir" \
                                     -e "$conda_env_prefix" \
