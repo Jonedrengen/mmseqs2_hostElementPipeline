@@ -314,3 +314,20 @@ run_host_element_screen_processor() {
         write_log "Successfully ran host element screen processor" "INFO" "$log_file"
     fi
 }
+
+write_plots() {
+    local conda_env_prefix="$1"
+    local write_plots_script="$2"
+    local host_element_screen_processor_output="$3"
+    local output_dir="$4"
+
+    mkdir -p "$output_dir"
+    #generate plots using the specified script
+    "$conda_env_prefix/bin/python" "$write_plots_script" "$host_element_screen_processor_output" "$output_dir"
+    local exit_status=$?
+    if [[ $exit_status -ne 0 ]]; then
+        write_log "Failed to write plots" "ERROR" "$log_file"
+    else
+        write_log "Successfully wrote plots" "INFO" "$log_file"
+    fi
+}

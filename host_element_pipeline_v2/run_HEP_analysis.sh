@@ -408,6 +408,11 @@ case "$execution_mode" in
                                      "$reference_fasta_file" \
                                      "$output_dir/compiled_files/result_compiled"
     
+    write_plots "$conda_env_prefix" \
+                "$pipeline_dir/subscripts/generate_plots.py" \
+                "$output_dir/compiled_files/result_compiled_Main_Data.xlsx" \
+                "$output_dir/plots"
+
     write_log "Finished local pipeline" "INFO" "$output_dir/logs/run.log"
     write_log " $(wc -l < "$output_dir/compiled_files/mmseq2_result_presence_absence.tsv")-1 (header) isolates compiled" "INFO" "$output_dir/logs/run.log"
     

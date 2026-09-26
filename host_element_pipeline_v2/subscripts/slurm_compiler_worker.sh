@@ -51,6 +51,12 @@ run_host_element_screen_processor \
 	"$reference_fasta_file" \
 	"$output_dir/compiled_files/result_compiled"
 
+write_plots \
+	"$conda_env_prefix" \
+	"$pipeline_dir/subscripts/generate_plots.py" \
+	"$output_dir/compiled_files/result_compiled_Main_Data.xlsx" \
+	"$output_dir/plots"
+	
 #moving slurm stuff
 mv "$SLURM_SUBMIT_DIR/mmseqs_compiler_${SLURM_JOB_ID}.out" "$output_dir/compiled_files"
 mv "$SLURM_SUBMIT_DIR/mmseqs_compiler_${SLURM_JOB_ID}.err" "$output_dir/compiled_files"
