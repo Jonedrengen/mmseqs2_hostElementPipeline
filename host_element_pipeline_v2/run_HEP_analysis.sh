@@ -97,17 +97,6 @@ validate_input() {
         echo
         sleep 3
     fi
-    if [[ -f "$host_file" ]]; then
-        local header_line=$'Genome_Ref\tHost'
-        if [[ $(grep -F "$header_line" "$host_file") ]]; then
-            write_log "Host file contains the required header: $header_line" "INFO"
-        else
-            write_log "Host file missing the required header: $header_line" "ERROR"
-            exit 1
-        fi
-    fi
-    
-
 }
 
 create_output_structure() {
@@ -227,6 +216,30 @@ validate_config() {
     done
 }
 
+#compares host file to sample_id_list.txt
+validate_host_file() {
+    local host_file="$1"
+    local sample_id_list_file="$2"
+    local log_file="${3:-}"
+
+    #check if header is EXACT match
+    local header_line=$'Genome_Ref\tHost'
+    if ! grep -Fqx "$header_line" "$host_file"; then
+        write_log "Host file missing the required header: $header_line" "ERROR" "$log_file"
+        exit 1
+    fi
+    write_log "Host file contains the required header: $header_line" "INFO" "$log_file"
+
+    #check if all sample IDs in the sample_id_list_file are present in the host file
+    while IFS= read -r sample_id || [[ -n "$sample_id" ]]; do
+        sample_id_stripped=$(basename "$sample_id" .fasta)
+        if ! grep -Fqx "$sample_id_stripped" <(cut -f1 "$host_file"); then
+            write_log "Sample ID $sample_id_stripped not found in host file $host_file" "ERROR" "$log_file"
+            exit 1
+        fi
+    done < "$sample_id_list_file"
+}
+
 #sample ID "xxxx.fasta" per line
 write_sample_id_list() {
     local input_dir="$1"
@@ -327,6 +340,7 @@ if [[ -z "$host_file" ]]; then
     host_file="$output_dir/host_file.tsv"
     write_log "wrote host file: $(head -n 5 "$host_file")" "INFO" "$output_dir/logs/run.log"
 fi
+validate_host_file "$host_file" "$output_dir/sample_ID_list.txt" "$output_dir/logs/run.log"
 
 #removing sequences shorter than 500bp
 remove_smalls "$pipeline_dir/subscripts/removesmalls.pl" \
