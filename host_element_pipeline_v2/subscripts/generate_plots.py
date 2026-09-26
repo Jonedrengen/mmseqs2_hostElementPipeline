@@ -190,21 +190,33 @@ def main():
 
     #________make MGE heatmap________
     mge_proportions = mmseqs2_data.get_named_sheet(args.sheet_mge)
-    MGE_config = HeatmapConfig(title="MGE Heatmap", ylabel="MGEs", cbar_kws={"label": "MGE proportion"})
-    plotter = HostElementPlotter(mmseqs_data_sheet=mge_proportions, config=MGE_config)
-    MGE_heatmap_data = plotter.prepare_MGE_heatmap_data(mge_proportions, args.mge_cols, args.index_id_mge)
+    MGE_config = HeatmapConfig(title="MGE Heatmap", 
+                               ylabel="MGEs", 
+                               cbar_kws={"label": "MGE proportion"})
+    plotter = HostElementPlotter(mmseqs_data_sheet=mge_proportions, 
+                                 config=MGE_config)
+    MGE_heatmap_data = plotter.prepare_MGE_heatmap_data(mge_proportions, 
+                                                        args.mge_cols, 
+                                                        args.index_id_mge)
+
     print(
         f"Generating MGE heatmap ({MGE_heatmap_data.shape[0]} elements, "
         f"{MGE_heatmap_data.shape[1]} hosts)..."
     )
-    plotter.write_MGE_heatmap(heatmap_data=MGE_heatmap_data, output_dir=args.output_dir)
+
+    plotter.write_MGE_heatmap(heatmap_data=MGE_heatmap_data, 
+                              output_dir=args.output_dir)
     print(f"Saved MGE heatmap: {args.output_dir / plotter.output_filename}")
 
     #________Make gene heatmaps________
     print(f"Preparing gene heatmaps '{args.sheet_gene}'...")
+
     gene_proportions = mmseqs2_data.get_named_sheet(args.sheet_gene)
-    GENE_config = HeatmapConfig(title="Gene Heatmap", ylabel="Genes", cbar_kws={"label": "Gene proportion"})
-    gene_plotter = GenePlotter(mmseqs_data_sheet=gene_proportions, config=GENE_config)
+    GENE_config = HeatmapConfig(title="Gene Heatmap", 
+                                ylabel="Genes", 
+                                cbar_kws={"label": "Gene proportion"})
+    gene_plotter = GenePlotter(mmseqs_data_sheet=gene_proportions, 
+                               config=GENE_config)
     gene_groups = gene_plotter.get_gene_groups(index_col_header=args.index_id_gene)
 
     #create output directory for gene heatmaps
@@ -215,8 +227,12 @@ def main():
     for prefix, gene_data in gene_groups.items():
         output_filename = f"{prefix}{gene_plotter.output_filename}"
         print(f"Generating gene heatmap for '{prefix}' ({len(gene_data)} genes)...")
-        gene_heatmap_data = gene_plotter.prepare_gene_heatmap_data(gene_data, args.gene_cols_gene, args.index_id_gene)
-        gene_plotter.write_gene_plot(gene_data=gene_heatmap_data, output_dir=gene_specific_output_dir, output_filename=output_filename)
+        gene_heatmap_data = gene_plotter.prepare_gene_heatmap_data(gene_data, 
+                                                                   args.gene_cols_gene, 
+                                                                   args.index_id_gene)
+        gene_plotter.write_gene_plot(gene_data=gene_heatmap_data, 
+                                     output_dir=gene_specific_output_dir,
+                                     output_filename=output_filename)
     print(f"Saved gene heatmapa: {gene_specific_output_dir}")
 
 if __name__ == "__main__":
