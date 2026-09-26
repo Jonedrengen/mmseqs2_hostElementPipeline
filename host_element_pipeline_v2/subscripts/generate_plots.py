@@ -29,7 +29,6 @@ def parse_args(argv):
     parser.add_argument("--index_id_gene", metavar="INDEX_IDENTIFIER", default="Element_Gene", type=str, required=False, help="Identifier for the gene index column in the input file")
     return parser.parse_args(argv)
 
-
 # store stuff to modify heatmaps
 @dataclass(frozen=True)
 class HeatmapConfig:
@@ -111,7 +110,6 @@ class HostElementPlotter:
         output_dir.mkdir(parents=True, exist_ok=True)
         axis_obj.figure.savefig(str(output_dir / self.output_filename))
         plt.close(figure)
-
 
 #prepare gene data and write plots
 class GenePlotter:
