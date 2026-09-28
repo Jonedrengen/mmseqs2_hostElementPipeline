@@ -1,10 +1,6 @@
 an extension of the mmseqs2 tool: https://github.com/soedinglab/mmseqs2 
 
 
-## Contacts: 
-Jon Sztuk Slotved (JOSS@ssi.dk)
-Maliha Aziz (xxx@gwu.edu)
-
 # Usage:
 
 ### Conda environment
@@ -119,3 +115,11 @@ Genome_Ref	EL01	EL35	EL40 ...
 Animal5	1	0	1 ...
 Human2	1	1	1 ...
 ```
+
+
+## Contacts: 
+Jon Sztuk Slotved (JOSS@ssi.dk)
+Maliha Aziz (mlaziz@email.gwu.edu)
+Lance Price (lprice@gwu.edu)
+Daniel Park (danpark@gwu.edu)
+Kara Schmidlin (kara.schmidlin@asu.edu)
