@@ -5,9 +5,9 @@ an extension of the mmseqs2 tool: https://github.com/soedinglab/mmseqs2
 Jon Sztuk Slotved (JOSS@ssi.dk)
 Maliha Aziz (xxx@gwu.edu)
 
+# Usage:
 
-
-## Conda environment
+### Conda environment
 
 Create the environment from the included file:
 
@@ -15,17 +15,14 @@ Create the environment from the included file:
 conda env create -f mmseq2_env.yml
 ```
 
-## Usage
+if this does not work, create a new env and install tools yourself
 
+### Config overview
 make a new config, based on template configuration file. Just copy it:
 
 ```bash
 cp template_config.env my_config.env
 ```
-
-set the paths and execution mode in your config.env. Then run the pipeline:
-
-## Config overview
 
 Most only need to set these in `host_element_pipeline_v2/config.env`:
 
@@ -36,7 +33,7 @@ Most only need to set these in `host_element_pipeline_v2/config.env`:
 - `fasta_pattern`: Which input FASTA filenames to include. (recommended to use current template example)
 - `base_host`: Host label used when no host file is provided.
 
-## Hosts
+### Hosts
 
 - `-f /path/to/host_file.tsv` is optional. **NOTE:** if used, see below for file struture
 
@@ -50,7 +47,7 @@ bash host_element_pipeline_v2/run_HEP_analysis.sh \
 
 
 
-## warnings
+### warnings
 - usually requires minimum 16GB of system mem.
 - for the referece/target fasta database. Avoid more than 1000 genes, as it could overload the system. -Edward Sung
 - make sure genes who are part of the same MGE have the same prefix. This assures not mistaken merges
@@ -122,4 +119,3 @@ Genome_Ref	EL01	EL35	EL40 ...
 Animal5	1	0	1 ...
 Human2	1	1	1 ...
 ```
-
