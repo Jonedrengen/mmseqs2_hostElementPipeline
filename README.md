@@ -20,13 +20,25 @@ conda env create -f mmseq2_env.yml
 make a new config, based on template configuration file. Just copy it:
 
 ```bash
-cp host_element_pipeline_v2/template_config.env host_element_pipeline_v2/config.env
+cp template_config.env my_config.env
 ```
 
 set the paths and execution mode in your config.env. Then run the pipeline:
 
+## Config overview
+
+Most only need to set these in `host_element_pipeline_v2/config.env`:
+
+- `source_directory`: Path to the pipeline folder. `path/to/host_element_pipeline_v2`
+- `conda_env_prefix`: Path to the Conda environment.
+- `reference_fasta_file`: Screening database; leave blank to use the bundled database.
+- `execution_mode`: `local` or `slurm`.
+- `fasta_pattern`: Which input FASTA filenames to include. (recommended to use current template example)
+- `base_host`: Host label used when no host file is provided.
+
+## Hosts
+
 - `-f /path/to/host_file.tsv` is optional. **NOTE:** if used, see below for file struture
-- For SLURM, set `execution_mode=slurm` and submit the same script:
 
 ```bash
 bash host_element_pipeline_v2/run_HEP_analysis.sh \
@@ -72,6 +84,10 @@ output/
 │   │   └── <sample>_mmseq2_result_compiled.tsv
 │   └── result_presence_absence/
 │       └── <sample>_mmseq2_result_presence_absence.tsv
+├── plots/
+│   ├── MGE_heatmap.png
+│   └── gene_specific/
+│       └── <element_prefix>gene_heatmap.png
 └── logs/
     └── run.log
 ```
@@ -89,7 +105,7 @@ Human2.fasta
 
 ### `host_file.tsv`
 
-The host file is tab-separated. If no host file is supplied, the pipeline creates one using `base_host` from the configuration (Important that header is exactly as below):
+The host file is tab-separated. (Important that header is exactly as below):
 
 ```text
 Genome_Ref	Host
@@ -107,4 +123,3 @@ Animal5	1	0	1 ...
 Human2	1	1	1 ...
 ```
 
-### 
