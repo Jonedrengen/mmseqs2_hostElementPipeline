@@ -69,8 +69,7 @@ class mmseqs2Results:
 
 #prepare MGE data and write plots
 class HostElementPlotter:
-    def __init__(self, mmseqs_data_sheet: pd.DataFrame, config: HeatmapConfig, output_filename: str = "MGE_heatmap.png"):
-        self.mmseqs_data_sheet: pd.DataFrame = mmseqs_data_sheet
+    def __init__(self, config: HeatmapConfig, output_filename: str = "MGE_heatmap.png"):
         self.config = config
         self.output_filename = output_filename
     
@@ -113,8 +112,7 @@ class HostElementPlotter:
 
 #prepare gene data and write plots
 class GenePlotter:
-    def __init__(self, mmseqs_data_sheet: pd.DataFrame, config: HeatmapConfig, output_filename: str = "gene_heatmap.png"):
-        self.mmseqs_data_sheet: pd.DataFrame = mmseqs_data_sheet
+    def __init__(self, config: HeatmapConfig, output_filename: str = "gene_heatmap.png"):
         self.config = config
         self.output_filename = output_filename
 
@@ -133,6 +131,7 @@ class GenePlotter:
 
     # reads data and groups genes, based on index prefix
     def get_gene_groups(self, 
+                        mmseqs_data_sheet: pd.DataFrame,
                         index_col_header: str,
                         sep: str = "_") -> dict[str, pd.DataFrame]:
         
@@ -140,15 +139,15 @@ class GenePlotter:
         unique_prefixes = set()
 
         #get unique prefixes from the index column
-        for row in self.mmseqs_data_sheet[index_col_header]:
+        for row in mmseqs_data_sheet[index_col_header]:
             prefix = row.split(sep)[0]
             unique_prefixes.add(prefix + sep)
         print(f"{len(unique_prefixes)} Unique prefixes: {unique_prefixes}")
 
         #group rows by unique prefix (each prefix gets its own DataFrame)
         for prefix in unique_prefixes:
-            mask_vector = self.mmseqs_data_sheet[index_col_header].str.startswith(prefix)
-            gene_groups[prefix] = self.mmseqs_data_sheet.loc[mask_vector]
+            mask_vector = mmseqs_data_sheet[index_col_header].str.startswith(prefix)
+            gene_groups[prefix] = mmseqs_data_sheet.loc[mask_vector]
             print(f"Prefix: {prefix}, Genes: {len(gene_groups[prefix])}")
 
         return gene_groups
@@ -193,8 +192,7 @@ def main():
     MGE_config = HeatmapConfig(title="MGE Heatmap", 
                                ylabel="MGEs", 
                                cbar_kws={"label": "MGE proportion"})
-    plotter = HostElementPlotter(mmseqs_data_sheet=mge_proportions, 
-                                 config=MGE_config)
+    plotter = HostElementPlotter(config=MGE_config)
     MGE_heatmap_data = plotter.prepare_MGE_heatmap_data(mge_proportions, 
                                                         args.mge_cols, 
                                                         args.index_id_mge)
@@ -215,9 +213,9 @@ def main():
     GENE_config = HeatmapConfig(title="Gene Heatmap", 
                                 ylabel="Genes", 
                                 cbar_kws={"label": "Gene proportion"})
-    gene_plotter = GenePlotter(mmseqs_data_sheet=gene_proportions, 
-                               config=GENE_config)
-    gene_groups = gene_plotter.get_gene_groups(index_col_header=args.index_id_gene)
+    gene_plotter = GenePlotter(config=GENE_config)
+    gene_groups = gene_plotter.get_gene_groups(gene_proportions,
+                                               index_col_header=args.index_id_gene)
 
     #create output directory for gene heatmaps
     gene_specific_output_dir = args.output_dir / "gene_specific"
