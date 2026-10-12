@@ -3,36 +3,6 @@ an extension of the mmseqs2 tool: https://github.com/soedinglab/mmseqs2
 
 # Usage:
 
-### Conda environment
-
-Create the environment from the included file:
-
-```bash
-conda env create -f mmseq2_env.yml
-```
-
-if this does not work, create a new env and install tools yourself
-
-### Config overview
-make a new config, based on template configuration file. Just copy it:
-
-```bash
-cp template_config.env my_config.env
-```
-
-Most only need to set these in `host_element_pipeline_v2/config.env`:
-
-- `source_directory`: Path to the pipeline folder. `path/to/host_element_pipeline_v2`
-- `conda_env_prefix`: Path to the Conda environment.
-- `reference_fasta_file`: Screening database; leave blank to use the bundled database.
-- `execution_mode`: `local` or `slurm`.
-- `fasta_pattern`: Which input FASTA filenames to include. (recommended to use current template example)
-- `base_host`: Host label used when no host file is provided.
-
-### Hosts
-
-- `-f /path/to/host_file.tsv` is optional. **NOTE:** if used, see below for file struture
-
 ```bash
 bash host_element_pipeline_v2/run_HEP_analysis.sh \
     -i /path/to/input_fastas \
@@ -41,10 +11,16 @@ bash host_element_pipeline_v2/run_HEP_analysis.sh \
     -f /path/to/host_file.tsv
 ```
 
+### Conda environment
 
+Create the environment from the included file:
+```bash
+conda env create -f mmseq2_env.yml
+```
+if this does not work, create a new env and install tools yourself
 
 ### warnings
-- usually requires minimum 16GB of system mem.
+- usually requires minimum 16GB of system RAM.
 - for the referece/target fasta database. Avoid more than 1000 genes, as it could overload the system. -Edward Sung
 - make sure genes who are part of the same MGE have the same prefix. This assures not mistaken merges
 
@@ -83,17 +59,6 @@ output/
 │       └── <element_prefix>gene_heatmap.png
 └── logs/
     └── run.log
-```
-
-## Some of the output files
-
-### `sample_ID_list.txt`
-
-One filename per line:
-
-```text
-Animal5.fasta
-Human2.fasta
 ```
 
 ### `host_file.tsv`
