@@ -1,5 +1,3 @@
-an extension of the mmseqs2 tool: https://github.com/soedinglab/mmseqs2 
-
 
 # Usage:
 
@@ -10,6 +8,17 @@ bash host_element_pipeline_v2/run_HEP_analysis.sh \
     -c host_element_pipeline_v2/config.env \
     -f /path/to/host_file.tsv
 ```
+
+#### -f `host_file.tsv`
+
+The host file is tab-separated. (Important that header is exactly as below):
+
+```text
+Genome_Ref	Host
+Animal5 Animal
+Human2	Human
+```
+
 
 ### Conda environment
 
@@ -22,7 +31,19 @@ if this does not work, create a new env and install tools yourself
 ### warnings
 - usually requires minimum 16GB of system RAM.
 - for the referece/target fasta database. Avoid more than 1000 genes, as it could overload the system. -Edward Sung
-- make sure genes who are part of the same MGE have the same prefix. This assures not mistaken merges
+- make sure genes who are part of the same MGE have the same prefix. This assures no mistaken merges `see queryDatabase.fasta`
+
+```text
+queryDatabase.fasta:
+
+>MGE1_gene1
+ATGGTGATGTA
+>MGE1_gene2
+ATATTGCGCG
+>MGE2_gene1
+ATACGAT
+```
+
 
 
 ## Pipeline output tree
@@ -59,16 +80,6 @@ output/
 │       └── <element_prefix>gene_heatmap.png
 └── logs/
     └── run.log
-```
-
-### `host_file.tsv`
-
-The host file is tab-separated. (Important that header is exactly as below):
-
-```text
-Genome_Ref	Host
-Animal5	Animal
-Human2	Human
 ```
 
 ### `result_compiled_element_presence.tsv`
