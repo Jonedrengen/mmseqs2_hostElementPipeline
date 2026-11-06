@@ -136,7 +136,7 @@ for file in fileList:
     Genome_Host = host_info_df.loc[host_info_df["Genome_Ref"] == Genome_Ref, "Host"].values[0]
 
     # 0 hit mmseq2 result files will have a file size of 0 (Also means all element_genes are not present)
-    if os.path.getsize(filepath) == 0:
+    if os.path.getsize(filepath) == 0 or pd.read_csv(filepath, sep="\t", nrows=1).empty:
 
         # summary_dict data
         summary_dict[Genome_Ref] = [0,

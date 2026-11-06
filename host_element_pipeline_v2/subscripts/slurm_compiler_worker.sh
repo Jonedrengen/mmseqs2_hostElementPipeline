@@ -59,11 +59,14 @@ then
 	exit 1
 fi
 
-write_plots \
+if ! write_plots \
 	"$conda_env_prefix" \
 	"$pipeline_dir/subscripts/generate_plots.py" \
 	"$output_dir/compiled_files/result_compiled_Main_Data.xlsx" \
-	"$output_dir/plots"
+	"$output_dir/plots";
+then
+	write_log "Writing plots failed" "WARNING" "$log_file"
+fi
 	
 #moving slurm stuff
 mv "$SLURM_SUBMIT_DIR/mmseqs_compiler_${SLURM_JOB_ID}.out" "$output_dir/compiled_files"
