@@ -29,6 +29,8 @@ def parse_args(argv):
     parser.add_argument("--index_id_gene", metavar="INDEX_IDENTIFIER", default="Element_Gene", type=str, required=False, help="Identifier for the gene index column in the input file")
     return parser.parse_args(argv)
 
+
+
 # store stuff to modify heatmaps
 @dataclass(frozen=True)
 class HeatmapConfig:
@@ -182,17 +184,16 @@ class GenePlotter:
 def main():
     #args
     args = parse_args(sys.argv[1:])
-
     #get data
     print(f"Reading: {args.input_file}")
     mmseqs2_data = mmseqs2Results.from_excel(args.input_file)
 
     #________make MGE heatmap________
     mge_proportions = mmseqs2_data.get_named_sheet(args.sheet_mge)
-    MGE_config = HeatmapConfig(title="MGE Heatmap", 
+    mge_config = HeatmapConfig(title="MGE Heatmap", 
                                ylabel="MGEs", 
                                cbar_kws={"label": "MGE proportion"})
-    plotter = HostElementPlotter(config=MGE_config)
+    plotter = HostElementPlotter(config=mge_config)
     MGE_heatmap_data = plotter.prepare_MGE_heatmap_data(mge_proportions, 
                                                         args.mge_cols, 
                                                         args.index_id_mge)
@@ -210,10 +211,10 @@ def main():
     print(f"Preparing gene heatmaps '{args.sheet_gene}'...")
 
     gene_proportions = mmseqs2_data.get_named_sheet(args.sheet_gene)
-    GENE_config = HeatmapConfig(title="Gene Heatmap", 
+    gene_config = HeatmapConfig(title="Gene Heatmap", 
                                 ylabel="Genes", 
                                 cbar_kws={"label": "Gene proportion"})
-    gene_plotter = GenePlotter(config=GENE_config)
+    gene_plotter = GenePlotter(config=gene_config)
     gene_groups = gene_plotter.get_gene_groups(gene_proportions,
                                                index_col_header=args.index_id_gene)
 

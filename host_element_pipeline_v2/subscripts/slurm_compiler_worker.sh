@@ -38,18 +38,26 @@ source "$pipeline_dir/subscripts/mmseqs_functionality.sh"
 source "$pipeline_dir/subscripts/slurm_functionality.sh"
 load_module "$module_to_load" "$log_file"
 
-compile_mmseqs_results \
+if ! compile_mmseqs_results \
 	"$output_dir/processing_files" \
 	"$output_dir/compiled_files" \
-	"$log_file"
+	"$log_file";
+then
+	write_log "Compiling results failed" "ERROR" "$log_file"
+	exit 1
+fi
 
-run_host_element_screen_processor \
+if ! run_host_element_screen_processor \
 	"$conda_env_prefix" \
 	"$pipeline_dir/subscripts/host_element_screen_processor.py" \
 	"$output_dir/compiled_files/result_compiled" \
 	"$host_file" \
 	"$reference_fasta_file" \
-	"$output_dir/compiled_files/result_compiled"
+	"$output_dir/compiled_files/result_compiled";
+then
+	write_log "Host element screen failed" "ERROR" "$log_file"
+	exit 1
+fi
 
 write_plots \
 	"$conda_env_prefix" \

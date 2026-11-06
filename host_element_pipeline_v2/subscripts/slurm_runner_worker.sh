@@ -56,7 +56,7 @@ write_nucl_query_db "$conda_env_prefix" \
                     "$query_database_prefix"
 
 #run search script
-run_mmseqs_search_and_convert "$conda_env_prefix" \
+if ! run_mmseqs_search_and_convert "$conda_env_prefix" \
                               "$query_database_prefix" \
                               "$reference_database_prefix" \
                               "$results_directory" \
@@ -67,13 +67,22 @@ run_mmseqs_search_and_convert "$conda_env_prefix" \
                               "$mmseqs_coverage" \
                               "$mmseqs_sensitivity" \
                               "$mmseqs_max_seqs" \
-                              "$results_directory/logs/run.log"
+                              "$results_directory/logs/run.log";
+then
+    write_log "MMseqs search failed" "ERROR"
+    exit 1
+fi
 
-combine_mmseqs_results_per_isolate "$conda_env_prefix" \
+if ! combine_mmseqs_results_per_isolate "$conda_env_prefix" \
                                    "$results_directory" \
                                    "$reference_fasta_file" \
                                    "$pipeline_dir/subscripts/mmseq2_results_replicate_combine.py" \
-                                   "$results_directory/logs/run.log"
+                                   "$results_directory/logs/run.log";
+then
+    write_log "Combining results failed" "ERROR"
+    exit 1
+fi
+
 
 #moving slurm stuff
 mv "$SLURM_SUBMIT_DIR/mmseqs_worker_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}.out" "$(dirname "$results_directory")"
